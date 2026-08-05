@@ -3,6 +3,7 @@
 import { use, useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Mic, Square, Volume2, VolumeX, ArrowUp } from 'lucide-react';
 import { scenarios } from '@/lib/scenarios';
 import { Turn, EmotionType } from '@/lib/types';
 import { Avatar } from '@/components/Avatar';
@@ -106,22 +107,24 @@ function BriefingScreen({
 
             {/* Patient details */}
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              {[
-                ['Name', scenario.patientName],
-                ['Age', String(scenario.patientAge)],
-                ['Starting state', `${Math.round(scenario.initialIntensity * 100)}% intensity`],
-                ['Session length', `${scenario.maxTurns} exchanges`],
-              ].map(([k, v]) => (
-                <tr key={k} style={{ borderBottom: '1px solid var(--border-sub)' }}>
-                  <td className="font-mono" style={{
-                    fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.1em',
-                    padding: '10px 0', paddingRight: 16, verticalAlign: 'top', whiteSpace: 'nowrap',
-                  }}>
-                    {k.toUpperCase()}
-                  </td>
-                  <td style={{ fontSize: 13, color: 'var(--text-2)', padding: '10px 0' }}>{v}</td>
-                </tr>
-              ))}
+              <tbody>
+                {[
+                  ['Name', scenario.patientName],
+                  ['Age', String(scenario.patientAge)],
+                  ['Starting state', `${Math.round(scenario.initialIntensity * 100)}% intensity`],
+                  ['Session length', `${scenario.maxTurns} exchanges`],
+                ].map(([k, v]) => (
+                  <tr key={k} style={{ borderBottom: '1px solid var(--border-sub)' }}>
+                    <td className="font-mono" style={{
+                      fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.1em',
+                      padding: '10px 0', paddingRight: 16, verticalAlign: 'top', whiteSpace: 'nowrap',
+                    }}>
+                      {k.toUpperCase()}
+                    </td>
+                    <td style={{ fontSize: 13, color: 'var(--text-2)', padding: '10px 0' }}>{v}</td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
 
             <div style={{ marginTop: 20 }}>
@@ -456,11 +459,10 @@ function ActiveSession({
             maxWidth: 520, width: '100%',
             padding: '14px 20px',
             background: 'var(--surface)',
-            borderLeft: `2px solid ${ec}`,
-            borderRadius: '0 var(--r) var(--r) 0',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--r)',
             minHeight: 56,
             display: 'flex', alignItems: 'center',
-            transition: 'border-color 0.6s',
           }}>
             {isLoading ? (
               <span style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
@@ -495,7 +497,7 @@ function ActiveSession({
             <span className="font-mono" style={{ fontSize: 10, color: ec, letterSpacing: '0.1em' }}>
               {EMOTION_LABELS[emotion].toUpperCase()}
             </span>
-            <span style={{ color: 'var(--border)', fontSize: 10 }}>·</span>
+            <span style={{ color: 'var(--text-3)', fontSize: 10, margin: '0 2px' }}>,</span>
             <span className="font-mono" style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.08em' }}>
               {Math.round(intensity * 100)}%
             </span>
@@ -540,8 +542,10 @@ function ActiveSession({
                 <div key={i} style={{
                   fontSize: 12, lineHeight: 1.5,
                   color: t.speaker === 'student' ? 'var(--text-1)' : 'var(--text-2)',
-                  paddingLeft: t.speaker === 'patient' ? 0 : 12,
-                  borderLeft: t.speaker === 'student' ? `2px solid ${ec}30` : 'none',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--r)',
+                  background: t.speaker === 'student' ? 'var(--surface-2)' : 'transparent',
+                  border: t.speaker === 'student' ? '1px solid var(--border)' : 'none',
                 }}>
                   <span style={{
                     fontWeight: 600, marginRight: 6,
@@ -573,12 +577,12 @@ function ActiveSession({
             background: 'var(--surface-2)',
             border: `1px solid ${isMuted ? 'var(--danger-bd)' : 'var(--border)'}`,
             color: isMuted ? 'var(--danger)' : 'var(--text-3)',
-            cursor: 'pointer', fontSize: 14, display: 'flex',
+            cursor: 'pointer', display: 'flex',
             alignItems: 'center', justifyContent: 'center',
             transition: 'border-color 0.15s, color 0.15s',
           }}
         >
-          {isMuted ? '🔇' : '🔊'}
+          {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
         </button>
 
         <button
@@ -590,13 +594,13 @@ function ActiveSession({
             background: isMicActive ? 'var(--danger-bg)' : 'var(--surface-2)',
             border: `1px solid ${isMicActive ? 'var(--danger-bd)' : 'var(--border)'}`,
             color: isMicActive ? 'var(--danger)' : 'var(--text-3)',
-            cursor: 'pointer', fontSize: 14, display: 'flex',
+            cursor: 'pointer', display: 'flex',
             alignItems: 'center', justifyContent: 'center',
             opacity: (!micSupported || isLoading) ? 0.4 : 1,
             transition: 'all 0.15s',
           }}
         >
-          {isMicActive ? '⏹' : '🎤'}
+          {isMicActive ? <Square size={18} fill="currentColor" /> : <Mic size={18} />}
         </button>
 
         <input
@@ -628,14 +632,13 @@ function ActiveSession({
             width: 36, height: 36, borderRadius: 'var(--r)', flexShrink: 0,
             background: 'var(--accent)',
             border: 'none', color: '#0a0a0a',
-            cursor: 'pointer', fontWeight: 700, fontSize: 16,
+            cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             opacity: (!input.trim() || isLoading) ? 0.35 : 1,
             transition: 'opacity 0.15s',
-            fontFamily: 'inherit',
           }}
         >
-          ↑
+          <ArrowUp size={20} strokeWidth={2.5} />
         </button>
       </div>
     </div>

@@ -65,7 +65,7 @@ export default function HomePage() {
               lineHeight: 1.6,
             }}>
               AI patient simulations for healthcare students. Build communication
-              skills - empathy, clarity, de-escalation - and get detailed feedback.
+              skills (empathy, clarity, de-escalation) and get detailed feedback.
             </p>
           </div>
 
@@ -139,7 +139,7 @@ export default function HomePage() {
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
                     {scenario.patientName}, {scenario.patientAge}
-                    <span style={{ margin: '0 8px', color: 'var(--text-3)' }}>·</span>
+                    <span style={{ margin: '0 4px', color: 'var(--text-3)' }}>,</span>
                     {scenario.description}
                   </div>
                 </div>
@@ -156,10 +156,7 @@ export default function HomePage() {
                   {diff.label.toUpperCase()}
                 </span>
 
-                {/* Arrow */}
-                <span style={{ color: 'var(--text-3)', flexShrink: 0, fontSize: 18, transition: 'color 0.15s, transform 0.15s' }}>
-                  →
-                </span>
+                {/* (Arrow removed to reduce AI tell) */}
               </Link>
             );
           })}
@@ -184,10 +181,6 @@ export default function HomePage() {
       <style>{`
         .scenario-row:hover {
           background: var(--surface) !important;
-        }
-        .scenario-row:hover span:last-child {
-          color: var(--accent) !important;
-          transform: translateX(3px);
         }
       `}</style>
     </div>

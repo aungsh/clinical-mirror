@@ -255,7 +255,7 @@ export default function FeedbackPage() {
                   <p style={{
                     fontSize: 12, fontStyle: 'italic', color: 'var(--text-3)',
                     margin: '0 0 6px',
-                    paddingLeft: 10, borderLeft: '2px solid var(--warn)', opacity: 0.7,
+                    padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 'var(--r)',
                     lineHeight: 1.5,
                   }}>
                     "{imp.moment}"
