@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { EmotionType } from '@/lib/types';
+import { EmotionType, Scenario } from '@/lib/types';
 
 interface AvatarProps {
   emotion: EmotionType;
@@ -9,6 +9,7 @@ interface AvatarProps {
   isSpeaking?: boolean;
   isListening?: boolean;
   size?: number;
+  variant?: Scenario['avatarVariant'];
 }
 
 const GLOW_COLORS: Record<EmotionType, string> = {
@@ -80,7 +81,14 @@ export function Avatar({
   isSpeaking = false,
   isListening = false,
   size = 300,
+  variant = 'margaret',
 }: AvatarProps) {
+  const palette = {
+    margaret: { skin: '#f5c898', shadow: '#e0a878', hair: '#5c3d1e', shirt: '#1e3a5f', iris: '#6b3d20' },
+    james: { skin: '#d9a06f', shadow: '#bc7d50', hair: '#2b211b', shirt: '#334155', iris: '#4b3528' },
+    emma: { skin: '#efc3a3', shadow: '#d79c7c', hair: '#8a4f42', shirt: '#5b4b78', iris: '#56705f' },
+    robert: { skin: '#d6a274', shadow: '#bd8158', hair: '#4b4744', shirt: '#35594a', iris: '#47372d' },
+  }[variant];
   const glowColor = GLOW_COLORS[emotion];
   const brows = BROWS[emotion];
   const mouth = MOUTHS[emotion];
@@ -171,32 +179,32 @@ export function Avatar({
         aria-label={`Patient avatar showing ${emotion} expression`}
       >
         {/* ── Body / shirt hint ── */}
-        <ellipse cx="100" cy="216" rx="54" ry="16" fill="#1e3a5f" />
-        <rect x="55" y="200" width="90" height="20" rx="6" fill="#1e3a5f" />
+        <ellipse cx="100" cy="216" rx="54" ry="16" fill={palette.shirt} />
+        <rect x="55" y="200" width="90" height="20" rx="6" fill={palette.shirt} />
 
         {/* ── Neck ── */}
-        <rect x="86" y="178" width="28" height="24" rx="8" fill="#f0c090" />
-        <rect x="88" y="178" width="24" height="18" fill="#f0c090" /> {/* blend */}
+        <rect x="86" y="178" width="28" height="24" rx="8" fill={palette.skin} />
+        <rect x="88" y="178" width="24" height="18" fill={palette.skin} /> {/* blend */}
 
         {/* ── Ear inners ── */}
-        <ellipse cx="30" cy="110" rx="6" ry="9" fill="#e0a878" />
-        <ellipse cx="170" cy="110" rx="6" ry="9" fill="#e0a878" />
+        <ellipse cx="30" cy="110" rx="6" ry="9" fill={palette.shadow} />
+        <ellipse cx="170" cy="110" rx="6" ry="9" fill={palette.shadow} />
 
         {/* ── Ears ── */}
-        <ellipse cx="30" cy="110" rx="11" ry="15" fill="#f0c090" />
-        <ellipse cx="170" cy="110" rx="11" ry="15" fill="#f0c090" />
+        <ellipse cx="30" cy="110" rx="11" ry="15" fill={palette.skin} />
+        <ellipse cx="170" cy="110" rx="11" ry="15" fill={palette.skin} />
 
         {/* ── Head ── */}
-        <ellipse cx="100" cy="110" rx="71" ry="78" fill="#f5c898" />
+        <ellipse cx="100" cy="110" rx="71" ry="78" fill={palette.skin} />
 
         {/* ── Hair ── */}
         <path
           d="M 33 94 C 28 44 68 15 100 15 C 132 15 172 44 167 94 C 158 68 142 58 100 57 C 58 58 42 68 33 94 Z"
-          fill="#5c3d1e"
+          fill={palette.hair}
         />
         {/* Hair side wisps */}
-        <path d="M 33 94 C 32 100 30 106 30 112 C 28 90 32 70 38 58 Z" fill="#5c3d1e" />
-        <path d="M 167 94 C 168 100 170 106 170 112 C 172 90 168 70 162 58 Z" fill="#5c3d1e" />
+        <path d="M 33 94 C 32 100 30 106 30 112 C 28 90 32 70 38 58 Z" fill={palette.hair} />
+        <path d="M 167 94 C 168 100 170 106 170 112 C 172 90 168 70 162 58 Z" fill={palette.hair} />
 
         {/* ── Eye whites ── */}
         <g
@@ -223,20 +231,20 @@ export function Avatar({
           />
 
           {/* Left iris */}
-          <circle cx="72" cy={97 + pupilDY} r="12" fill="#6b3d20" />
+          <circle cx="72" cy={97 + pupilDY} r="12" fill={palette.iris} />
           <circle cx="72" cy={97 + pupilDY} r="7" fill="#1a0800" />
           <circle cx="76" cy={94 + pupilDY} r="3.5" fill="white" opacity="0.95" />
           <circle cx="69" cy={101 + pupilDY} r="1.5" fill="white" opacity="0.4" />
 
           {/* Right iris */}
-          <circle cx="128" cy={97 + pupilDY} r="12" fill="#6b3d20" />
+          <circle cx="128" cy={97 + pupilDY} r="12" fill={palette.iris} />
           <circle cx="128" cy={97 + pupilDY} r="7" fill="#1a0800" />
           <circle cx="132" cy={94 + pupilDY} r="3.5" fill="white" opacity="0.95" />
           <circle cx="125" cy={101 + pupilDY} r="1.5" fill="white" opacity="0.4" />
 
           {/* Eyelid covers (upper lid shading) */}
-          <ellipse cx="72" cy={97 - eyeRy + 3} rx="20" ry="5" fill="#f5c898" opacity="0.4" />
-          <ellipse cx="128" cy={97 - eyeRy + 3} rx="20" ry="5" fill="#f5c898" opacity="0.4" />
+          <ellipse cx="72" cy={97 - eyeRy + 3} rx="20" ry="5" fill={palette.skin} opacity="0.4" />
+          <ellipse cx="128" cy={97 - eyeRy + 3} rx="20" ry="5" fill={palette.skin} opacity="0.4" />
         </g>
 
         {/* ── Eyebrows ── */}

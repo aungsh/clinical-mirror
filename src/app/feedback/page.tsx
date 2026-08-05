@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -41,11 +42,18 @@ function ChartTooltip({ active, payload, label }: any) {
 export default function FeedbackPage() {
   const router = useRouter();
   const [data, setData] = useState<SessionData | null>(null);
+  const [previous, setPrevious] = useState<SessionData | null>(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('clinicalmirror_session');
     if (!stored) { router.push('/'); return; }
-    try { setData(JSON.parse(stored)); } catch { router.push('/'); }
+    try {
+      const current = JSON.parse(stored) as SessionData;
+      setData(current);
+      const attempts = JSON.parse(sessionStorage.getItem('clinicalmirror_attempts') ?? '[]') as SessionData[];
+      const matching = Array.isArray(attempts) ? attempts.filter(item => item?.scenario?.id === current.scenario.id) : [];
+      if (matching.length > 1) setPrevious(matching[matching.length - 2]);
+    } catch { router.push('/'); }
   }, [router]);
 
   if (!data) return (
@@ -76,6 +84,9 @@ export default function FeedbackPage() {
   );
   const avgColor = avg >= 7 ? '#9eb299' : avg >= 5 ? '#fab475' : '#f49797';
   const studentTurns = turns.filter(t => t.speaker === 'student').length;
+  const previousAvg = previous
+    ? Math.round((previous.feedback.scores.empathy + previous.feedback.scores.clarity + previous.feedback.scores.deescalation) / 3)
+    : null;
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -140,13 +151,18 @@ export default function FeedbackPage() {
           </div>
 
           {/* Overall score: large number */}
-          <div style={{ textAlign: 'center', flexShrink: 0 }}>
+            <div style={{ textAlign: 'center', flexShrink: 0 }}>
             <div style={{ fontSize: 72, fontWeight: 700, lineHeight: 1, color: avgColor }}>
               {avg}
             </div>
             <div className="font-mono" style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.12em', marginTop: 6 }}>
               OVERALL / 10
             </div>
+            {previousAvg !== null && (
+              <div style={{ marginTop: 8, fontSize: 12, color: avg >= previousAvg ? 'var(--primary)' : 'var(--text-3)' }}>
+                {avg >= previousAvg ? '+' : ''}{avg - previousAvg} vs previous attempt
+              </div>
+            )}
           </div>
         </div>
 
@@ -156,7 +172,7 @@ export default function FeedbackPage() {
             SCORE BREAKDOWN
           </p>
           <div className="score-grid" style={{ display: 'grid', gap: 1, background: 'var(--border)' }}>
-            {SCORE_CONFIGS.map((cfg, i) => (
+            {SCORE_CONFIGS.map((cfg) => (
               <div key={cfg.key} style={{
                 background: 'var(--surface)',
                 padding: '24px',
@@ -236,7 +252,10 @@ export default function FeedbackPage() {
                   <span className="font-mono" style={{ fontSize: 10, color: 'var(--primary)', opacity: 0.6, paddingTop: 2, flexShrink: 0 }}>
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <span style={{ color: 'var(--text-2)' }}>{s}</span>
+                  <span style={{ color: 'var(--text-2)' }}>
+                    <strong style={{ color: 'var(--text-1)' }}>Turn {s.turn}: “{s.moment}”</strong><br />
+                    {s.observation}
+                  </span>
                 </div>
               ))}
             </div>
@@ -258,7 +277,7 @@ export default function FeedbackPage() {
                     padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 'var(--r)',
                     lineHeight: 1.5,
                   }}>
-                    "{imp.moment}"
+                    Turn {imp.turn}: &ldquo;{imp.moment}&rdquo;
                   </p>
                   <p style={{ fontSize: 13, color: 'var(--text-2)', margin: 0, lineHeight: 1.5 }}>
                     {imp.suggestion}
@@ -266,6 +285,22 @@ export default function FeedbackPage() {
                 </div>
               ))}
             </div>
+          </section>
+        </div>
+
+        <div className="feedback-grid" style={{ display: 'grid', gap: 24, marginBottom: 48 }}>
+          <section style={{ padding: 20, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)' }}>
+            <p className="font-mono" style={{ fontSize: 10, color: 'var(--accent)', letterSpacing: '0.12em', margin: '0 0 14px' }}>RETRY PLAN</p>
+            <ol style={{ margin: 0, paddingLeft: 20, color: 'var(--text-2)', fontSize: 13, lineHeight: 1.7 }}>
+              {feedback.retryPlan.map((item, index) => <li key={index}>{item}</li>)}
+            </ol>
+          </section>
+          <section style={{ padding: 20, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)' }}>
+            <p className="font-mono" style={{ fontSize: 10, color: 'var(--warn)', letterSpacing: '0.12em', margin: '0 0 14px' }}>INTERPRET WITH CARE · {feedback.overallConfidence.toUpperCase()} CONFIDENCE</p>
+            <ul style={{ margin: '0 0 12px', paddingLeft: 20, color: 'var(--text-2)', fontSize: 13, lineHeight: 1.7 }}>
+              {feedback.limitations.map((item, index) => <li key={index}>{item}</li>)}
+            </ul>
+            <p style={{ margin: 0, color: 'var(--text-3)', fontSize: 12, lineHeight: 1.5 }}>{feedback.educationalDisclaimer}</p>
           </section>
         </div>
 

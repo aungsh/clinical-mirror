@@ -23,8 +23,10 @@ export interface Scenario {
   patientName: string;
   patientAge: number;
   icon: string;
-  systemPrompt: string;
   openingLine: string;
+  avatarVariant: 'margaret' | 'james' | 'emma' | 'robert';
+  availability: 'available' | 'faculty-review';
+  safetyNote?: string;
 
   // Briefing fields
   patientBackground: string;   // who this person is
@@ -46,15 +48,26 @@ export interface FeedbackScore {
 }
 
 export interface Improvement {
+  turn: number;
   moment: string;
   suggestion: string;
+}
+
+export interface FeedbackEvidence {
+  turn: number;
+  moment: string;
+  observation: string;
 }
 
 export interface FeedbackResult {
   scores: FeedbackScore;
   summary: string;
-  strengths: string[];
+  strengths: FeedbackEvidence[];
   improvements: Improvement[];
+  limitations: string[];
+  retryPlan: string[];
+  overallConfidence: 'low' | 'moderate' | 'high';
+  educationalDisclaimer: string;
 }
 
 export interface SessionData {
