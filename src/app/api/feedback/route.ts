@@ -1,118 +1,94 @@
-import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { scenarios } from "@/lib/scenarios";
-import { Turn } from "@/lib/types";
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { NextResponse } from 'next/server';
+import { scenarios } from '@/lib/scenarios';
+import { apiError, clampScore, parseJsonObject, safeText, validateTurns } from '@/lib/ai-api.server';
+import type { FeedbackEvidence, Improvement } from '@/lib/types';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+function evidenceList(value: unknown): FeedbackEvidence[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 3).map((item) => {
+    const entry = item && typeof item === 'object' ? item as Record<string, unknown> : {};
+    return {
+      turn: Math.max(1, Math.round(typeof entry.turn === 'number' ? entry.turn : 1)),
+      moment: safeText(entry.moment, 'Student response'),
+      observation: safeText(entry.observation, 'This helped the conversation.'),
+    };
+  });
+}
 
-function parseGeminiJSON(text: string) {
-  let clean = text.trim();
-  if (clean.startsWith("```")) {
-    clean = clean
-      .replace(/^```(?:json)?\n?/, "")
-      .replace(/\n?```$/, "")
-      .trim();
-  }
-  try {
-    return JSON.parse(clean);
-  } catch {
-    const match = clean.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
-    throw new Error("Could not parse JSON from Gemini response");
-  }
+function improvementList(value: unknown): Improvement[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 3).map((item) => {
+    const entry = item && typeof item === 'object' ? item as Record<string, unknown> : {};
+    return {
+      turn: Math.max(1, Math.round(typeof entry.turn === 'number' ? entry.turn : 1)),
+      moment: safeText(entry.moment, 'Student response'),
+      suggestion: safeText(entry.suggestion, 'Acknowledge the emotion explicitly and invite the patient to continue.'),
+    };
+  });
+}
+
+function textList(value: unknown, fallback: string[]): string[] {
+  if (!Array.isArray(value)) return fallback;
+  const items = value.map((item) => safeText(item, '')).filter(Boolean).slice(0, 4);
+  return items.length ? items : fallback;
 }
 
 export async function POST(req: Request) {
   try {
-    const { scenarioId, history, intensityTimeSeries } = (await req.json()) as {
-      scenarioId: string;
-      history: Turn[];
-      intensityTimeSeries: number[];
-    };
-
-    const scenario = scenarios.find((s) => s.id === scenarioId);
-    if (!scenario) {
-      return NextResponse.json(
-        { error: "Scenario not found" },
-        { status: 404 },
-      );
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return NextResponse.json({ error: 'Gemini API key is missing.' }, { status: 503 });
+    const body = await req.json().catch(() => null) as Record<string, unknown> | null;
+    const scenarioId = typeof body?.scenarioId === 'string' ? body.scenarioId : '';
+    const history = validateTurns(body?.history);
+    if (!scenarioId || !history || history.filter((turn) => turn.speaker === 'student').length < 2) {
+      return NextResponse.json({ error: 'At least two valid student turns are required.' }, { status: 400 });
     }
+    const scenario = scenarios.find((item) => item.id === scenarioId);
+    if (!scenario) return NextResponse.json({ error: 'Scenario not found.' }, { status: 404 });
 
-    const studentTurns = history
-      .filter((t) => t.speaker === "student")
-      .map((t, i) => `[Turn ${i + 1}] ${t.text}`)
-      .join("\n");
+    let studentIndex = 0;
+    const transcript = history.map((turn) => {
+      if (turn.speaker === 'student') studentIndex += 1;
+      return turn.speaker === 'student'
+        ? `STUDENT TURN ${studentIndex}: ${turn.text}`
+        : `SIMULATED PATIENT (${turn.emotion ?? 'neutral'}, generated intensity ${turn.intensity?.toFixed(2) ?? '?'}): ${turn.text}`;
+    }).join('\n');
 
-    const fullTranscript = history
-      .map(
-        (t) =>
-          `${t.speaker === "student" ? "STUDENT" : `PATIENT (${t.emotion ?? "neutral"}, intensity ${t.intensity?.toFixed(2) ?? "?"})`}: ${t.text}`,
-      )
-      .join("\n");
+    const prompt = `You are a formative clinical communication assessor. Assess only the learner's communication in this fictional AI simulation.
 
-    const intensitySummary =
-      intensityTimeSeries.length > 0
-        ? intensityTimeSeries
-            .map((v, i) => `Turn ${i + 1}: ${v.toFixed(2)}`)
-            .join(", ")
-        : "No data";
+SCENARIO: ${scenario.title} — ${scenario.description}
+TRANSCRIPT:\n${transcript}
 
-    const gradingPrompt = `You are an expert clinical communication skills assessor. You are NOT roleplaying. Analyse the following healthcare student's conversation with an AI patient simulation and grade their performance.
+Return only valid JSON with this exact structure:
+{"scores":{"empathy":0,"clarity":0,"deescalation":0},"summary":"","strengths":[{"turn":1,"moment":"","observation":""}],"improvements":[{"turn":1,"moment":"","suggestion":""}],"limitations":[""],"retryPlan":[""],"overallConfidence":"low|moderate|high","educationalDisclaimer":""}
 
-SCENARIO: "${scenario.title}" — ${scenario.description}
+Rubric: empathy = emotional acknowledgement before facts/solutions, validation, curiosity and listening; clarity = plain language, structure, pacing and checking understanding; de-escalation = textual evidence that the learner acknowledged concerns, avoided defensiveness, and offered appropriate next steps. Generated patient emotion/intensity may support—but must never determine—the score because it is not independent ground truth.
 
-PATIENT EMOTION INTENSITY OVER TIME (0=completely calm, 1=maximum distress):
-${intensitySummary}
+Every strength and improvement must cite the exact numbered STUDENT TURN and closely quote or accurately paraphrase it. Do not invent evidence. Use 1–2 strengths, 2–3 improvements, and 2–3 concrete retry steps. State limitations including that one AI-generated interaction cannot establish clinical competence and the simulated emotion signal is model-generated. Confidence must reflect transcript length and evidence quality. The disclaimer must say this is educational formative feedback, not a competency assessment or clinical advice.`;
 
-STUDENT TURNS (for analysis):
-${studentTurns}
+    const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({
+      model: 'gemini-3.1-flash-lite',
+      generationConfig: { responseMimeType: 'application/json' },
+    });
+    const result = await model.generateContent(prompt);
+    const parsed = parseJsonObject(result.response.text());
+    const scores = parsed.scores && typeof parsed.scores === 'object' ? parsed.scores as Record<string, unknown> : {};
+    const confidence = ['low', 'moderate', 'high'].includes(String(parsed.overallConfidence))
+      ? parsed.overallConfidence as 'low' | 'moderate' | 'high' : 'low';
 
-FULL CONVERSATION TRANSCRIPT:
-${fullTranscript}
-
-Grade the student. Return ONLY valid JSON, no other text:
-{
-  "scores": {
-    "empathy": <integer 0-10>,
-    "clarity": <integer 0-10>,
-    "deescalation": <integer 0-10>
-  },
-  "summary": "<2-3 sentence plain-English overview of overall performance>",
-  "strengths": ["<specific quoted or paraphrased student moment>", "<another strength>"],
-  "improvements": [
-    { "moment": "<quoted or paraphrased student statement that could be improved>", "suggestion": "<concrete, actionable improvement advice>" },
-    { "moment": "...", "suggestion": "..." }
-  ]
-}
-
-GRADING RUBRIC:
-- empathy (0-10): Did the student acknowledge the patient's emotional state BEFORE offering information or solutions? Did they use validating language? Did they avoid dismissing or minimising the patient's feelings?
-- clarity (0-10): Was communication jargon-free and structured? Were explanations easy to follow? Did the student check for understanding?
-- deescalation (0-10): Use ONLY the intensity time series provided — do NOT re-infer from the transcript. If the patient's intensity trended clearly downward, score higher. If intensity stayed high or rose, score lower.
-
-Provide 1-2 strengths and 2-3 specific, actionable improvements. Be constructive and educationally useful.`;
-
-    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
-    const result = await model.generateContent(gradingPrompt);
-    const rawText = result.response.text();
-
-    const parsed = parseGeminiJSON(rawText);
-
-    // Clamp scores 0-10
-    for (const key of ["empathy", "clarity", "deescalation"] as const) {
-      if (typeof parsed.scores?.[key] !== "number") parsed.scores[key] = 5;
-      parsed.scores[key] = Math.max(
-        0,
-        Math.min(10, Math.round(parsed.scores[key])),
-      );
-    }
-
-    return NextResponse.json(parsed);
-  } catch (err) {
-    console.error("[/api/feedback] error:", err);
-    return NextResponse.json(
-      { error: "Failed to generate feedback", details: String(err) },
-      { status: 500 },
-    );
+    return NextResponse.json({
+      scores: { empathy: clampScore(scores.empathy), clarity: clampScore(scores.clarity), deescalation: clampScore(scores.deescalation) },
+      summary: safeText(parsed.summary, 'This short attempt provides an initial opportunity for reflection.'),
+      strengths: evidenceList(parsed.strengths),
+      improvements: improvementList(parsed.improvements),
+      limitations: textList(parsed.limitations, ['This was a short AI-generated simulation and cannot establish clinical competence.', 'The patient emotion signal is generated by the same model and is not independent evidence.']),
+      retryPlan: textList(parsed.retryPlan, ['Name the patient’s emotion explicitly.', 'Use one open question before offering information.', 'Check the patient’s understanding before closing.']),
+      overallConfidence: confidence,
+      educationalDisclaimer: safeText(parsed.educationalDisclaimer, 'Educational formative feedback only; not a competency assessment or clinical advice.'),
+    });
+  } catch (error) {
+    const failure = apiError(error, '/api/feedback');
+    return NextResponse.json(failure.body, { status: failure.status });
   }
 }

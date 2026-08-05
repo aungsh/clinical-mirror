@@ -798,6 +798,7 @@ export default function SessionPage({ params }: { params: Promise<{ scenarioId: 
 
   const [stage, setStage] = useState<Stage>('brief');
   const [isEnding, setIsEnding] = useState(false);
+  const [endError, setEndError] = useState('');
 
   const scenario = scenarios.find(s => s.id === scenarioId);
 
@@ -821,6 +822,7 @@ export default function SessionPage({ params }: { params: Promise<{ scenarioId: 
 
   const handleEnd = async (turns: Turn[]) => {
     setIsEnding(true);
+    setEndError('');
     const intensityTimeSeries = turns
       .filter(t => t.speaker === 'patient' && t.intensity !== undefined)
       .map(t => t.intensity!);
@@ -830,11 +832,17 @@ export default function SessionPage({ params }: { params: Promise<{ scenarioId: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenarioId, history: turns, intensityTimeSeries }),
       });
-      const feedback = await res.json();
-      sessionStorage.setItem('clinicalmirror_session', JSON.stringify({ scenario, turns, feedback }));
+      const feedback = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(feedback.error ?? 'Feedback could not be generated.');
+      const session = { scenario, turns, feedback };
+      sessionStorage.setItem('clinicalmirror_session', JSON.stringify(session));
+      const previous = JSON.parse(sessionStorage.getItem('clinicalmirror_attempts') ?? '[]');
+      const attempts = Array.isArray(previous) ? [...previous, session].slice(-8) : [session];
+      sessionStorage.setItem('clinicalmirror_attempts', JSON.stringify(attempts));
       router.push('/feedback');
     } catch (err) {
       console.error(err);
+      setEndError(err instanceof Error ? err.message : 'Feedback could not be generated. Please try again.');
       setIsEnding(false);
     }
   };
@@ -843,6 +851,12 @@ export default function SessionPage({ params }: { params: Promise<{ scenarioId: 
     <>
       {stage === 'brief' && <BriefingScreen scenario={scenario} onBegin={() => setStage('active')} />}
       {stage === 'active' && !isEnding && <ActiveSession scenario={scenario} onEnd={handleEnd} />}
+
+      {endError && (
+        <div role="alert" style={{ position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)', zIndex: 60, maxWidth: 560, padding: '12px 16px', background: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: 'var(--r)', color: 'var(--text-1)', fontSize: 13 }}>
+          {endError} You can end the session again to retry.
+        </div>
+      )}
 
       {isEnding && (
         <div style={{
