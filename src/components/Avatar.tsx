@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { EmotionType, Scenario } from '@/lib/types';
+import { EmotionType } from '@/lib/types';
 
 interface AvatarProps {
   emotion: EmotionType;
@@ -9,7 +9,7 @@ interface AvatarProps {
   isSpeaking?: boolean;
   isListening?: boolean;
   size?: number;
-  variant?: Scenario['avatarVariant'];
+  variant?: string;
 }
 
 const GLOW_COLORS: Record<EmotionType, string> = {
@@ -83,12 +83,17 @@ export function Avatar({
   size = 300,
   variant = 'margaret',
 }: AvatarProps) {
-  const palette = {
+  const palettes: Record<string, { skin: string; shadow: string; hair: string; shirt: string; iris: string }> = {
     margaret: { skin: '#f5c898', shadow: '#e0a878', hair: '#5c3d1e', shirt: '#1e3a5f', iris: '#6b3d20' },
     james: { skin: '#d9a06f', shadow: '#bc7d50', hair: '#2b211b', shirt: '#334155', iris: '#4b3528' },
     emma: { skin: '#efc3a3', shadow: '#d79c7c', hair: '#8a4f42', shirt: '#5b4b78', iris: '#56705f' },
     robert: { skin: '#d6a274', shadow: '#bd8158', hair: '#4b4744', shirt: '#35594a', iris: '#47372d' },
-  }[variant];
+    david: { skin: '#f1c29e', shadow: '#d19e7a', hair: '#3a3431', shirt: '#4b5563', iris: '#3e3025' },
+    chloe: { skin: '#f4dec9', shadow: '#d6bbac', hair: '#1a1918', shirt: '#846675', iris: '#2b2a29' },
+    dr: { skin: '#7a5138', shadow: '#583621', hair: '#1c1714', shirt: '#d1d5db', iris: '#2d1e13' },
+    nurse: { skin: '#e8c1a5', shadow: '#c59d81', hair: '#2e2520', shirt: '#7198a6', iris: '#3d281a' },
+  };
+  const palette = palettes[variant] || palettes.margaret;
   const glowColor = GLOW_COLORS[emotion];
   const brows = BROWS[emotion];
   const mouth = MOUTHS[emotion];

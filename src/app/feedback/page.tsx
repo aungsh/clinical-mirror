@@ -72,7 +72,7 @@ export default function FeedbackPage() {
   const { scenario, turns, feedback } = data;
 
   const chartData = turns
-    .filter(t => t.speaker === 'patient' && t.intensity !== undefined)
+    .filter(t => t.speakerId !== 'student' && t.intensity !== undefined)
     .map((t, i) => ({
       turn: i + 1,
       intensity: Math.round((t.intensity ?? 0) * 100),
@@ -83,7 +83,7 @@ export default function FeedbackPage() {
     (feedback.scores.empathy + feedback.scores.clarity + feedback.scores.deescalation) / 3
   );
   const avgColor = avg >= 7 ? '#9eb299' : avg >= 5 ? '#fab475' : '#f49797';
-  const studentTurns = turns.filter(t => t.speaker === 'student').length;
+  const studentTurns = turns.filter(t => t.speakerId === 'student').length;
   const previousAvg = previous
     ? Math.round((previous.feedback.scores.empathy + previous.feedback.scores.clarity + previous.feedback.scores.deescalation) / 3)
     : null;
@@ -141,7 +141,7 @@ export default function FeedbackPage() {
             </p>
             <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
               <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
-                {scenario.patientName}, {scenario.patientAge}
+                {scenario.title}
               </span>
               <span style={{ color: 'var(--border)' }}>·</span>
               <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
@@ -315,20 +315,27 @@ export default function FeedbackPage() {
             maxHeight: 280, overflowY: 'auto',
             display: 'flex', flexDirection: 'column', gap: 10,
           }}>
-            {turns.map((t, i) => (
-              <div key={i} style={{ display: 'flex', gap: 14, fontSize: 13, lineHeight: 1.5 }}>
-                <span className="font-mono" style={{
-                  width: 60, flexShrink: 0, textAlign: 'right',
-                  fontSize: 9, letterSpacing: '0.1em', paddingTop: 2,
-                  color: t.speaker === 'student' ? 'var(--accent)' : 'var(--text-3)',
-                }}>
-                  {t.speaker === 'student' ? 'YOU' : scenario.patientName.split(' ')[0].toUpperCase()}
-                </span>
-                <span style={{ color: t.speaker === 'student' ? 'var(--text-1)' : 'var(--text-2)' }}>
-                  {t.text}
-                </span>
-              </div>
-            ))}
+            {turns.map((t, i) => {
+              const isStudent = t.speakerId === 'student';
+              const persona = scenario.personas?.[t.speakerId];
+              const displayName = isStudent
+                ? 'YOU'
+                : (persona?.name.split(' ')[0].toUpperCase() ?? t.speakerId.toUpperCase());
+              return (
+                <div key={i} style={{ display: 'flex', gap: 14, fontSize: 13, lineHeight: 1.5 }}>
+                  <span className="font-mono" style={{
+                    width: 60, flexShrink: 0, textAlign: 'right',
+                    fontSize: 9, letterSpacing: '0.1em', paddingTop: 2,
+                    color: isStudent ? 'var(--accent)' : 'var(--text-3)',
+                  }}>
+                    {displayName}
+                  </span>
+                  <span style={{ color: isStudent ? 'var(--text-1)' : 'var(--text-2)' }}>
+                    {t.text}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </section>
 

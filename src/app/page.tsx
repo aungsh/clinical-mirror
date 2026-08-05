@@ -1,11 +1,16 @@
 import Link from "next/link";
-import { scenarios } from "@/lib/scenario-catalog";
+import { scenarios } from "@/lib/scenarios";
 
 const DIFF = {
   easy: { label: "Easy", color: "#9eb299" },
   medium: { label: "Medium", color: "#fab475" },
   hard: { label: "Hard", color: "#f49797" },
 };
+
+function getInitialPersona(scenario: typeof scenarios[0]) {
+  const seg = scenario.segments[scenario.initialSegmentId];
+  return scenario.personas[seg.activePersonaId];
+}
 
 export default function HomePage() {
   return (
@@ -180,27 +185,28 @@ export default function HomePage() {
 
                 {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 18,
-                      fontWeight: 600,
-                      color: "var(--text-1)",
-                      marginBottom: 2,
-                    }}
-                  >
-                    {scenario.title}
+                    <div
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 600,
+                        color: "var(--text-1)",
+                        marginBottom: 2,
+                      }}
+                    >
+                      {scenario.title}
+                    </div>
+                    <div style={{ fontSize: 13, color: "var(--text-2)" }}>
+                      {(() => { const p = getInitialPersona(scenario); return `${p.name}, ${p.age}`; })()
+                      }
+                      <span style={{ margin: "0 4px", color: "var(--text-3)" }}>
+                        ,
+                      </span>
+                      {scenario.description}
+                      {scenario.availability === "faculty-review" && (
+                        <span style={{ marginLeft: 8, color: "var(--warn)", fontWeight: 600 }}>Faculty review required</span>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 13, color: "var(--text-2)" }}>
-                    {scenario.patientName}, {scenario.patientAge}
-                    <span style={{ margin: "0 4px", color: "var(--text-3)" }}>
-                      ,
-                    </span>
-                    {scenario.description}
-                    {scenario.availability !== "available" && (
-                      <span style={{ marginLeft: 8, color: "var(--warn)", fontWeight: 600 }}>Faculty review required</span>
-                    )}
-                  </div>
-                </div>
 
                 {/* Difficulty */}
                 <span
