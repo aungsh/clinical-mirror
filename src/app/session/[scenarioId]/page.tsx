@@ -7,8 +7,9 @@ import Link from 'next/link';
 import { Mic, Square, Volume2, VolumeX, ArrowUp } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { scenarios } from '@/lib/scenario-catalog';
-import { Turn, EmotionType } from '@/lib/types';
+import { Turn, EmotionType, AvatarMode, StockAvatarId } from '@/lib/types';
 import { Avatar } from '@/components/Avatar';
+import { RealisticAvatar, STOCK_AVATAR_LABELS } from '@/components/RealisticAvatar';
 import { VoiceOrb } from '@/components/VoiceOrb';
 import { speakEmotional, cancelSpeech, initVoices } from '@/lib/tts';
 
@@ -35,7 +36,175 @@ const DIFF_COLORS = {
   hard:   '#f49797',
 };
 
-type Stage = 'brief' | 'active';
+type Stage = 'brief' | 'avatar-select' | 'active';
+
+/* ─── Avatar Selection Screen ────────────────────────────────────────────── */
+
+const STOCK_AVATAR_IDS: StockAvatarId[] = ['patient-a', 'patient-b', 'patient-c'];
+
+function AvatarSelectionScreen({
+  scenario,
+  onSelect,
+}: {
+  scenario: (typeof scenarios)[0];
+  onSelect: (mode: AvatarMode, avatarId: StockAvatarId) => void;
+}) {
+  const [selectedMode, setSelectedMode] = useState<AvatarMode>('mii');
+  const [selectedAvatarId, setSelectedAvatarId] = useState<StockAvatarId>('patient-a');
+  const realisticUnavailable = !process.env.NEXT_PUBLIC_WAV2LIP_AVAILABLE;
+
+  return (
+    <div style={{ background: 'var(--bg)', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+      <header style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '16px 40px',
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--bg)', flexShrink: 0,
+      }}>
+        <button
+          onClick={() => history.back()}
+          style={{
+            fontSize: 13, color: 'var(--text-2)', background: 'none',
+            border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0,
+          }}
+        >
+          ← Back
+        </button>
+        <span className="font-mono" style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.12em' }}>
+          AVATAR SETUP
+        </span>
+      </header>
+
+      <main style={{ flex: 1, padding: '48px 40px', maxWidth: 760, width: '100%', margin: '0 auto' }}>
+        <div style={{ marginBottom: 40 }}>
+          <p className="font-mono" style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.14em', marginBottom: 12 }}>
+            CHOOSE AVATAR MODE
+          </p>
+          <h1 style={{
+            fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 700,
+            letterSpacing: '-0.02em', color: 'var(--text-1)', margin: 0,
+          }}>
+            How would you like to see {scenario.patientName.split(' ')[0]}?
+          </h1>
+        </div>
+
+        {/* Mode cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 40 }}>
+
+          {/* Mii / Stylised card */}
+          <button
+            id="btn-avatar-mode-mii"
+            onClick={() => setSelectedMode('mii')}
+            style={{
+              textAlign: 'left', padding: '24px', borderRadius: 'var(--r)',
+              background:   selectedMode === 'mii' ? 'var(--accent-bg)' : 'var(--surface)',
+              border:       `1px solid ${selectedMode === 'mii' ? 'var(--accent-bd)' : 'var(--border)'}`,
+              cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+            }}
+          >
+            <div style={{ fontSize: 32, marginBottom: 12 }}>🧑‍⚕️</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-1)', marginBottom: 6 }}>
+              Stylised Avatar
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
+              Expressive illustrated character. Instant responses, no setup required.
+            </div>
+            {selectedMode === 'mii' && (
+              <div className="font-mono" style={{ marginTop: 10, fontSize: 9, color: 'var(--accent)', letterSpacing: '0.12em' }}>SELECTED ✓</div>
+            )}
+          </button>
+
+          {/* Realistic card */}
+          <button
+            id="btn-avatar-mode-realistic"
+            onClick={() => { if (!realisticUnavailable) setSelectedMode('realistic'); }}
+            disabled={!!realisticUnavailable}
+            style={{
+              textAlign: 'left', padding: '24px', borderRadius: 'var(--r)',
+              background:   selectedMode === 'realistic' ? 'var(--accent-bg)' : 'var(--surface)',
+              border:       `1px solid ${selectedMode === 'realistic' ? 'var(--accent-bd)' : 'var(--border)'}`,
+              cursor: realisticUnavailable ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit', transition: 'all 0.15s',
+              opacity: realisticUnavailable ? 0.5 : 1,
+            }}
+          >
+            <div style={{ fontSize: 32, marginBottom: 12 }}>🎥</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-1)', marginBottom: 6 }}>
+              Realistic Avatar
+              {realisticUnavailable && (
+                <span className="font-mono" style={{ marginLeft: 8, fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.1em' }}>(GPU OFFLINE)</span>
+              )}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
+              Lip-synced video of a human face. Requires a few seconds per response.
+            </div>
+            {selectedMode === 'realistic' && (
+              <div className="font-mono" style={{ marginTop: 10, fontSize: 9, color: 'var(--accent)', letterSpacing: '0.12em' }}>SELECTED ✓</div>
+            )}
+          </button>
+        </div>
+
+        {/* Stock avatar picker — only shown in realistic mode */}
+        {selectedMode === 'realistic' && (
+          <div style={{ marginBottom: 40 }}>
+            <p className="font-mono" style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.14em', marginBottom: 16 }}>
+              SELECT STOCK AVATAR
+            </p>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              {STOCK_AVATAR_IDS.map((id) => (
+                <button
+                  key={id}
+                  id={`btn-stock-avatar-${id}`}
+                  onClick={() => setSelectedAvatarId(id)}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: 'var(--r)',
+                    background:   selectedAvatarId === id ? 'var(--accent-bg)' : 'var(--surface)',
+                    border:       `1px solid ${selectedAvatarId === id ? 'var(--accent-bd)' : 'var(--border)'}`,
+                    color:        selectedAvatarId === id ? 'var(--accent)' : 'var(--text-2)',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    fontSize: 13, fontWeight: selectedAvatarId === id ? 600 : 400,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {STOCK_AVATAR_LABELS[id]}
+                </button>
+              ))}
+            </div>
+            <p style={{ marginTop: 12, fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>
+              Each patient turn takes ~5–8 s to generate. A loading indicator will appear while the video is being prepared.
+            </p>
+          </div>
+        )}
+
+        <button
+          id="btn-confirm-avatar"
+          onClick={() => onSelect(selectedMode, selectedAvatarId)}
+          style={{
+            padding: '14px 32px',
+            background: 'var(--accent)',
+            color: '#0a0a0a',
+            border: 'none',
+            borderRadius: 'var(--r)',
+            fontSize: 15,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            transition: 'opacity 0.15s',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 10,
+          }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+        >
+          Begin Session
+          <span style={{ fontSize: 18 }}>→</span>
+        </button>
+      </main>
+    </div>
+  );
+}
 
 /* ─── Briefing Screen ────────────────────────────────────────────────────── */
 
@@ -262,9 +431,13 @@ function BriefingScreen({
 function ActiveSession({
   scenario,
   onEnd,
+  avatarMode,
+  avatarId,
 }: {
   scenario: (typeof scenarios)[0];
   onEnd: (turns: Turn[]) => void;
+  avatarMode: AvatarMode;
+  avatarId: StockAvatarId;
 }) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [emotion, setEmotion] = useState<EmotionType>('neutral');
@@ -280,6 +453,11 @@ function ActiveSession({
   const [patientTurnCount, setPatientTurnCount] = useState(0);
   const [lastPatientText, setLastPatientText] = useState(scenario.openingLine);
   const [requestError, setRequestError] = useState('');
+
+  // ── Realistic avatar state ────────────────────────────────────────────
+  const [realisticVideoUrl, setRealisticVideoUrl] = useState<string | null>(null);
+  const [realisticLoading, setRealisticLoading] = useState(false);
+  const [realisticFallback, setRealisticFallback] = useState(false);
 
   const recognitionRef = useRef<any>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
@@ -305,6 +483,9 @@ function ActiveSession({
   }, [isMuted]);
 
   useEffect(() => {
+    let cancelled = false;
+    let openingTimer: ReturnType<typeof setTimeout> | undefined;
+
     const opening: Turn = {
       speaker: 'patient', text: scenario.openingLine,
       emotion: 'neutral', intensity: scenario.initialIntensity,
@@ -313,8 +494,20 @@ function ActiveSession({
     setTurns([opening]);
     setLastPatientText(scenario.openingLine);
     setPatientTurnCount(1);
-    initVoices().then(() => setTimeout(() => speak(scenario.openingLine, 'neutral'), 300));
-    return () => cancelSpeech();
+
+    void initVoices().then(() => {
+      if (cancelled) return;
+
+      openingTimer = setTimeout(() => {
+        if (!cancelled) speak(scenario.openingLine, 'neutral');
+      }, 300);
+    });
+
+    return () => {
+      cancelled = true;
+      if (openingTimer !== undefined) clearTimeout(openingTimer);
+      cancelSpeech();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -349,7 +542,32 @@ function ActiveSession({
         setIntensity(data.intensity);
         setLastPatientText(data.reply);
         setPatientTurnCount(c => c + 1);
-        speak(data.reply, emo);
+
+        if (avatarMode === 'realistic') {
+          // Kick off video generation in parallel with TTS fallback
+          setRealisticVideoUrl(null);
+          setRealisticFallback(false);
+          setRealisticLoading(true);
+          // Still speak via browser TTS so there's no silence during generation
+          speak(data.reply, emo);
+          fetch('/api/patient-reply-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: data.reply, emotion: emo, avatarId }),
+          })
+            .then(r => r.json())
+            .then(d => {
+              if (d.fallback) {
+                setRealisticFallback(true);
+              } else {
+                setRealisticVideoUrl(d.videoUrl ?? null);
+              }
+            })
+            .catch(() => setRealisticFallback(true))
+            .finally(() => setRealisticLoading(false));
+        } else {
+          speak(data.reply, emo);
+        }
       } else {
         setInput(txt);
         setRequestError(data.error ?? 'The simulated patient could not respond. Please try again.');
@@ -542,16 +760,28 @@ function ActiveSession({
             )}
           </div>
 
-          {/* Avatar */}
+          {/* Avatar — Realistic or Mii */}
           <div className="animate-breathe avatar-wrapper">
-            <Avatar
-              emotion={emotion}
-              intensity={intensity}
-              variant={scenario.avatarVariant}
-              isSpeaking={isSpeaking}
-              isListening={isMicActive}
-              size={280}
-            />
+            {avatarMode === 'realistic' && !realisticFallback ? (
+              <RealisticAvatar
+                videoUrl={realisticVideoUrl}
+                isLoading={realisticLoading}
+                fallback={realisticFallback}
+                avatarId={avatarId}
+                emotion={emotion}
+                size={280}
+                onPlaybackEnd={() => setIsSpeaking(false)}
+              />
+            ) : (
+              <Avatar
+                emotion={emotion}
+                intensity={intensity}
+                variant={scenario.avatarVariant}
+                isSpeaking={isSpeaking}
+                isListening={isMicActive}
+                size={280}
+              />
+            )}
           </div>
 
           {/* Emotion label - simple, no glow */}
@@ -798,6 +1028,8 @@ export default function SessionPage({ params }: { params: Promise<{ scenarioId: 
 
   const [stage, setStage] = useState<Stage>('brief');
   const [isEnding, setIsEnding] = useState(false);
+  const [avatarMode, setAvatarMode] = useState<AvatarMode>('mii');
+  const [avatarId, setAvatarId] = useState<StockAvatarId>('patient-a');
   const [endError, setEndError] = useState('');
 
   const scenario = scenarios.find(s => s.id === scenarioId);
@@ -849,8 +1081,30 @@ export default function SessionPage({ params }: { params: Promise<{ scenarioId: 
 
   return (
     <>
-      {stage === 'brief' && <BriefingScreen scenario={scenario} onBegin={() => setStage('active')} />}
-      {stage === 'active' && !isEnding && <ActiveSession scenario={scenario} onEnd={handleEnd} />}
+      {stage === 'brief' && (
+        <BriefingScreen
+          scenario={scenario}
+          onBegin={() => setStage('avatar-select')}
+        />
+      )}
+      {stage === 'avatar-select' && (
+        <AvatarSelectionScreen
+          scenario={scenario}
+          onSelect={(mode, id) => {
+            setAvatarMode(mode);
+            setAvatarId(id);
+            setStage('active');
+          }}
+        />
+      )}
+      {stage === 'active' && !isEnding && (
+        <ActiveSession
+          scenario={scenario}
+          onEnd={handleEnd}
+          avatarMode={avatarMode}
+          avatarId={avatarId}
+        />
+      )}
 
       {endError && (
         <div role="alert" style={{ position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)', zIndex: 60, maxWidth: 560, padding: '12px 16px', background: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: 'var(--r)', color: 'var(--text-1)', fontSize: 13 }}>

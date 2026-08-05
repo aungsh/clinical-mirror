@@ -1,3 +1,7 @@
+export type AvatarMode = 'mii' | 'realistic';
+
+export type StockAvatarId = 'patient-a' | 'patient-b' | 'patient-c';
+
 export type EmotionType =
   | 'neutral'
   | 'sad'
@@ -13,6 +17,8 @@ export interface Turn {
   emotion?: EmotionType;
   intensity?: number;
   timestamp: number;
+  /** URL to a Wav2Lip-generated video clip, if realistic avatar mode was used */
+  videoUrl?: string;
 }
 
 export interface Scenario {
