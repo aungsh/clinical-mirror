@@ -41,29 +41,64 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null) as Record<string, unknown> | null;
     const scenarioId = typeof body?.scenarioId === 'string' ? body.scenarioId : '';
     const history = validateTurns(body?.history);
-    if (!scenarioId || !history || history.filter((turn) => turn.speaker === 'student').length < 2) {
+    if (!scenarioId || !history || history.filter((turn) => turn.speakerId === 'student').length < 2) {
       return NextResponse.json({ error: 'At least two valid student turns are required.' }, { status: 400 });
     }
     const scenario = scenarios.find((item) => item.id === scenarioId);
     if (!scenario) return NextResponse.json({ error: 'Scenario not found.' }, { status: 404 });
 
+    const intensityTimeSeries = history
+      .filter((t) => t.speakerId !== 'student')
+      .map((t) => t.intensity ?? 0.5);
+
+    const intensitySummary =
+      intensityTimeSeries.length > 0
+        ? intensityTimeSeries
+            .map((v, i) => `Turn ${i + 1}: ${v.toFixed(3)}`)
+            .join(', ')
+        : 'No data';
+
+    const segmentSummary = Object.values(scenario.segments)
+      .map((seg) => {
+        const persona = scenario.personas[seg.activePersonaId];
+        return `- Segment "${seg.title}" (${persona?.name ?? seg.activePersonaId}, role: ${persona?.role ?? 'unknown'}): Goal — ${seg.sessionGoal}`;
+      })
+      .join('\n');
+
     let studentIndex = 0;
-    const transcript = history.map((turn) => {
-      if (turn.speaker === 'student') studentIndex += 1;
-      return turn.speaker === 'student'
-        ? `STUDENT TURN ${studentIndex}: ${turn.text}`
-        : `SIMULATED PATIENT (${turn.emotion ?? 'neutral'}, generated intensity ${turn.intensity?.toFixed(2) ?? '?'}): ${turn.text}`;
-    }).join('\n');
+    const fullTranscript = history
+      .map((t) => {
+        if (t.speakerId === 'student') {
+          studentIndex += 1;
+          return `STUDENT TURN ${studentIndex}: ${t.text}`;
+        }
+        const persona = scenario.personas[t.speakerId];
+        const segment = scenario.segments[t.segmentId];
+        const name = persona?.name ?? t.speakerId;
+        const segTitle = segment?.title ?? t.segmentId;
+        return `${name.toUpperCase()} [${segTitle}] (${t.emotion ?? 'neutral'}, intensity ${t.intensity?.toFixed(3) ?? '?'}): ${t.text}`;
+      })
+      .join('\n');
 
     const prompt = `You are a formative clinical communication assessor. Assess only the learner's communication in this fictional AI simulation.
 
 SCENARIO: ${scenario.title} — ${scenario.description}
-TRANSCRIPT:\n${transcript}
 
-Return only valid JSON with this exact structure:
+SEGMENTS IN THIS SCENARIO:
+${segmentSummary}
+
+PATIENT/PERSONA EMOTION INTENSITY OVER TIME (0=completely calm, 1=maximum distress):
+${intensitySummary}
+
+TRANSCRIPT:\n${fullTranscript}
+
+Return ONLY valid JSON with this exact structure:
 {"scores":{"empathy":0,"clarity":0,"deescalation":0},"summary":"","strengths":[{"turn":1,"moment":"","observation":""}],"improvements":[{"turn":1,"moment":"","suggestion":""}],"limitations":[""],"retryPlan":[""],"overallConfidence":"low|moderate|high","educationalDisclaimer":""}
 
-Rubric: empathy = emotional acknowledgement before facts/solutions, validation, curiosity and listening; clarity = plain language, structure, pacing and checking understanding; de-escalation = textual evidence that the learner acknowledged concerns, avoided defensiveness, and offered appropriate next steps. Generated patient emotion/intensity may support—but must never determine—the score because it is not independent ground truth.
+GRADING RUBRIC:
+- empathy (0-10): Did the student adapt their approach based on the persona's role? For PATIENTS/FAMILY: did they validate feelings before offering solutions, and avoid minimising distress? For COLLEAGUES: did they demonstrate professional respect, engage in constructive reflection, and avoid defensiveness during supervision?
+- clarity (0-10): Did the student adapt their language appropriately? For PATIENTS/FAMILY: was communication completely jargon-free and easy to follow? For COLLEAGUES: did the student use structured, concise clinical handovers (e.g., SBAR) and appropriate professional terminology?
+- deescalation (0-10): Use ONLY the intensity time series provided — do NOT re-infer from the transcript. For PATIENTS/FAMILY: did intensity trend downward due to validation? For COLLEAGUES: if challenged (e.g., a critical nurse or probing supervisor), did the student remain composed and de-escalate professional tension?
 
 Every strength and improvement must cite the exact numbered STUDENT TURN and closely quote or accurately paraphrase it. Do not invent evidence. Use 1–2 strengths, 2–3 improvements, and 2–3 concrete retry steps. State limitations including that one AI-generated interaction cannot establish clinical competence and the simulated emotion signal is model-generated. Confidence must reflect transcript length and evidence quality. The disclaimer must say this is educational formative feedback, not a competency assessment or clinical advice.`;
 
@@ -71,6 +106,7 @@ Every strength and improvement must cite the exact numbered STUDENT TURN and clo
       model: 'gemini-3.1-flash-lite',
       generationConfig: { responseMimeType: 'application/json' },
     });
+    
     const result = await model.generateContent(prompt);
     const parsed = parseJsonObject(result.response.text());
     const scores = parsed.scores && typeof parsed.scores === 'object' ? parsed.scores as Record<string, unknown> : {};
