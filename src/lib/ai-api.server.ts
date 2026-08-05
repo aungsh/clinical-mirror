@@ -14,17 +14,21 @@ export function parseJsonObject(text: string): Record<string, unknown> {
   }
 }
 
-export function validateTurns(value: unknown, max = 40): Turn[] | null {
+export function validateTurns(value: unknown, max = 80): Turn[] | null {
   if (!Array.isArray(value) || value.length > max) return null;
   const turns: Turn[] = [];
   for (const item of value) {
     if (!item || typeof item !== 'object') return null;
     const turn = item as Partial<Turn>;
-    if ((turn.speaker !== 'student' && turn.speaker !== 'patient') || typeof turn.text !== 'string') return null;
+    // Accept both the new speakerId field and any string speaker
+    const speakerId = typeof turn.speakerId === 'string' ? turn.speakerId : '';
+    const segmentId = typeof turn.segmentId === 'string' ? turn.segmentId : '';
+    if (!speakerId || typeof turn.text !== 'string') return null;
     const text = turn.text.trim();
     if (!text || text.length > 2400) return null;
     turns.push({
-      speaker: turn.speaker,
+      speakerId,
+      segmentId,
       text,
       timestamp: typeof turn.timestamp === 'number' ? turn.timestamp : Date.now(),
       ...(EMOTIONS.includes(turn.emotion as EmotionType) ? { emotion: turn.emotion as EmotionType } : {}),
