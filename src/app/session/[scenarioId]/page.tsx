@@ -265,7 +265,7 @@ function ActiveSession({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMicActive, setIsMicActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [showTranscript, setShowTranscript] = useState(false);
+  const [activePanel, setActivePanel] = useState<'none' | 'transcript' | 'briefing'>('none');
   const [shouldAutoSend, setShouldAutoSend] = useState(false);
   const [micSupported, setMicSupported] = useState(true);
   const [patientTurnCount, setPatientTurnCount] = useState(0);
@@ -284,7 +284,7 @@ function ActiveSession({
 
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [turns, showTranscript]);
+  }, [turns, activePanel]);
 
   const speak = useCallback((text: string, emo: EmotionType) => {
     if (isMuted) return;
@@ -441,13 +441,28 @@ function ActiveSession({
         </button>
 
         <button
-          id="btn-toggle-transcript"
-          onClick={() => setShowTranscript(v => !v)}
+          id="btn-toggle-briefing"
+          onClick={() => setActivePanel(p => p === 'briefing' ? 'none' : 'briefing')}
           style={{
             padding: '5px 12px', fontSize: 12, borderRadius: 'var(--r)',
-            background: showTranscript ? 'var(--accent-bg)' : 'var(--surface-2)',
-            border: `1px solid ${showTranscript ? 'var(--accent-bd)' : 'var(--border)'}`,
-            color: showTranscript ? 'var(--accent)' : 'var(--text-2)',
+            background: activePanel === 'briefing' ? 'var(--accent-bg)' : 'var(--surface-2)',
+            border: `1px solid ${activePanel === 'briefing' ? 'var(--accent-bd)' : 'var(--border)'}`,
+            color: activePanel === 'briefing' ? 'var(--accent)' : 'var(--text-2)',
+            cursor: 'pointer', fontFamily: 'inherit',
+            transition: 'all 0.15s',
+          }}
+        >
+          Briefing
+        </button>
+
+        <button
+          id="btn-toggle-transcript"
+          onClick={() => setActivePanel(p => p === 'transcript' ? 'none' : 'transcript')}
+          style={{
+            padding: '5px 12px', fontSize: 12, borderRadius: 'var(--r)',
+            background: activePanel === 'transcript' ? 'var(--accent-bg)' : 'var(--surface-2)',
+            border: `1px solid ${activePanel === 'transcript' ? 'var(--accent-bd)' : 'var(--border)'}`,
+            color: activePanel === 'transcript' ? 'var(--accent)' : 'var(--text-2)',
             cursor: 'pointer', fontFamily: 'inherit',
             transition: 'all 0.15s',
           }}
@@ -548,46 +563,98 @@ function ActiveSession({
           )}
         </div>
 
-        {/* Transcript panel */}
-        {showTranscript && (
+        {/* Side panel */}
+        {activePanel !== 'none' && (
           <div style={{
-            width: 280, borderLeft: '1px solid var(--border)',
+            width: 320, borderLeft: '1px solid var(--border)',
             display: 'flex', flexDirection: 'column',
             background: 'var(--surface)', flexShrink: 0,
           }}>
-            <div style={{
-              padding: '12px 16px', borderBottom: '1px solid var(--border)',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
-              <span className="font-mono" style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.14em' }}>
-                TRANSCRIPT
-              </span>
-              <span className="font-mono" style={{ fontSize: 9, color: 'var(--text-3)' }}>
-                {studentCount} exchanges
-              </span>
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {turns.map((t, i) => (
-                <div key={i} style={{
-                  fontSize: 12, lineHeight: 1.5,
-                  color: t.speaker === 'student' ? 'var(--text-1)' : 'var(--text-2)',
-                  padding: '8px 12px',
-                  borderRadius: 'var(--r)',
-                  background: t.speaker === 'student' ? 'var(--surface-2)' : 'transparent',
-                  border: t.speaker === 'student' ? '1px solid var(--border)' : 'none',
+            {activePanel === 'transcript' && (
+              <>
+                <div style={{
+                  padding: '12px 16px', borderBottom: '1px solid var(--border)',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 }}>
-                  <span style={{
-                    fontWeight: 600, marginRight: 6,
-                    color: t.speaker === 'student' ? 'var(--accent)' : 'var(--text-3)',
-                    fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.1em',
-                  }}>
-                    {t.speaker === 'student' ? 'YOU' : scenario.patientName.split(' ')[0].toUpperCase()}
+                  <span className="font-mono" style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.14em' }}>
+                    TRANSCRIPT
                   </span>
-                  {t.text}
+                  <span className="font-mono" style={{ fontSize: 9, color: 'var(--text-3)' }}>
+                    {studentCount} exchanges
+                  </span>
                 </div>
-              ))}
-              <div ref={transcriptEndRef} />
-            </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {turns.map((t, i) => (
+                    <div key={i} style={{
+                      fontSize: 12, lineHeight: 1.5,
+                      color: t.speaker === 'student' ? 'var(--text-1)' : 'var(--text-2)',
+                      padding: '8px 12px',
+                      borderRadius: 'var(--r)',
+                      background: t.speaker === 'student' ? 'var(--surface-2)' : 'transparent',
+                      border: t.speaker === 'student' ? '1px solid var(--border)' : 'none',
+                    }}>
+                      <span style={{
+                        fontWeight: 600, marginRight: 6,
+                        color: t.speaker === 'student' ? 'var(--accent)' : 'var(--text-3)',
+                        fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.1em',
+                      }}>
+                        {t.speaker === 'student' ? 'YOU' : scenario.patientName.split(' ')[0].toUpperCase()}
+                      </span>
+                      {t.text}
+                    </div>
+                  ))}
+                  <div ref={transcriptEndRef} />
+                </div>
+              </>
+            )}
+
+            {activePanel === 'briefing' && (
+              <>
+                <div style={{
+                  padding: '12px 16px', borderBottom: '1px solid var(--border)',
+                }}>
+                  <span className="font-mono" style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.14em' }}>
+                    MISSION BRIEF
+                  </span>
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+                  <div>
+                    <div className="font-mono" style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.1em', marginBottom: 6 }}>GOAL</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-1)', lineHeight: 1.5, fontWeight: 500, padding: '8px 12px', background: 'var(--accent-bg)', border: '1px solid var(--accent-bd)', borderRadius: 'var(--r)' }}>
+                      {scenario.sessionGoal}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-mono" style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.1em', marginBottom: 6 }}>BACKGROUND</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
+                      {scenario.patientBackground}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-mono" style={{ fontSize: 9, color: 'var(--primary)', letterSpacing: '0.1em', marginBottom: 8 }}>TRY THIS</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {scenario.doList.map((item, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 8, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.4 }}>
+                          <span style={{ color: 'var(--primary)', opacity: 0.6, flexShrink: 0 }}>+</span>
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-mono" style={{ fontSize: 9, color: 'var(--destructive)', letterSpacing: '0.1em', marginBottom: 8 }}>AVOID THIS</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {scenario.avoidList.map((item, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 8, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.4 }}>
+                          <span style={{ color: 'var(--destructive)', opacity: 0.6, flexShrink: 0 }}>-</span>
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
