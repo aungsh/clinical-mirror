@@ -8,7 +8,7 @@ export const scenarios: Scenario[] = [
     difficulty: 'hard',
     patientName: 'Margaret Chen',
     patientAge: 52,
-    icon: '🩺',
+    icon: 'C',
     initialIntensity: 0.75,
     maxTurns: 10,
 
@@ -16,21 +16,21 @@ export const scenarios: Scenario[] = [
       'Margaret is a primary school teacher, married with two adult children. She has been healthy most of her life. She noticed a lump three weeks ago and came in for tests. This is her first serious health scare and she has been barely sleeping.',
 
     clinicalContext:
-      'Margaret has been called back for results following a biopsy. She has stage 3 breast cancer. She does not yet know her diagnosis. Your role is to deliver this news compassionately and ensure she leaves feeling supported — not alone.',
+      'Margaret has been called back for results following a biopsy. She has stage 3 breast cancer. She does not yet know her diagnosis. Your role is to deliver this news compassionately and ensure she leaves feeling supported, not alone.',
 
     sessionGoal:
       'Deliver the diagnosis with compassion, give her space to react emotionally, and ensure she feels supported before any clinical next steps are discussed.',
 
     objectives: [
       'Find out what Margaret already knows or suspects before you speak',
-      'Deliver the news gently in plain language — no jargon',
+      'Deliver the news gently in plain language (no jargon)',
       'Pause after delivering the diagnosis and acknowledge her emotional response',
     ],
 
     doList: [
       'Start with "What have you been told so far?"',
       'Give the news simply: "The results show it is cancer"',
-      'Stay silent after — let her react',
+      'Stay silent after, let her react',
       'Say "You are not going through this alone"',
     ],
 
@@ -55,7 +55,7 @@ WHAT MAKES YOU CALMER: Being spoken to gently and slowly. Having your feelings a
 
 WHAT MAKES YOU MORE DISTRESSED: Medical jargon you don't understand. Being rushed. Being treated like a statistic. Not being given space to react emotionally.
 
-DIFFICULTY: hard — needs significant acknowledgment before opening up. Becomes more distressed if the student jumps straight to medical facts without acknowledging her fear first.
+DIFFICULTY: hard. Needs significant acknowledgment before opening up. Becomes more distressed if the student jumps straight to medical facts without acknowledging her fear first.
 
 RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
 {
@@ -72,7 +72,7 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
     difficulty: 'hard',
     patientName: 'James Morrison',
     patientAge: 45,
-    icon: '🏥',
+    icon: 'H',
     initialIntensity: 0.85,
     maxTurns: 10,
 
@@ -80,20 +80,20 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
       'James is a senior manager who flew in from overseas when his father Thomas (78) was admitted. He has been at the hospital for 3 hours with no updates. He is the primary family decision-maker and is used to being in control.',
 
     clinicalContext:
-      'Thomas is stable and receiving appropriate care. The problem is a communication failure — James received no updates for 12 hours. His anger is justified frustration, not unreasonableness. De-escalate by acknowledging him, not defending the system.',
+      'Thomas is stable and receiving appropriate care. The problem is a communication failure. James received no updates for 12 hours. His anger is justified frustration, not unreasonableness. De-escalate by acknowledging him, not defending the system.',
 
     sessionGoal:
       'De-escalate James\'s anger, acknowledge his frustration genuinely, and rebuild his trust by giving him a clear update on his father.',
 
     objectives: [
-      'Let him vent fully before responding — do not interrupt',
+      'Let him vent fully before responding, do not interrupt',
       'Explicitly acknowledge his frustration and the wait',
       'Give a concrete action step, not a vague promise',
     ],
 
     doList: [
       'Say his name and make eye contact',
-      '"You have every right to be frustrated — this wait is not acceptable"',
+      '"You have every right to be frustrated. This wait is not acceptable"',
       'Offer a specific update: "Let me find out exactly where things are right now"',
       'Ask what he needs most right now',
     ],
@@ -109,7 +109,7 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
 
     systemPrompt: `You are roleplaying as James Morrison, a 45-year-old businessman and son of a hospitalised patient, in a clinical communication training simulation for healthcare students. Stay fully in character. Never break character. Never mention you are an AI.
 
-PERSONA: James Morrison, 45, senior manager, type-A personality. His father Thomas (78) has been admitted for 4 days. James took time off work and waited 3+ hours to speak to someone. He is not a bad person — he is scared and frustrated.
+PERSONA: James Morrison, 45, senior manager, type-A personality. His father Thomas (78) has been admitted for 4 days. James took time off work and waited 3+ hours to speak to someone. He is not a bad person, he is scared and frustrated.
 
 EMOTIONAL BASELINE: angry, intensity 0.85
 
@@ -119,7 +119,7 @@ WHAT MAKES YOU CALMER: Being taken seriously. Genuine acknowledgment of the wait
 
 WHAT MAKES YOU MORE DISTRESSED: Being talked down to. Vague answers. Being told to calm down. Empty apologies without action.
 
-DIFFICULTY: hard — starts very hostile. Sustained empathy with concrete action is needed.
+DIFFICULTY: hard. Starts very hostile. Sustained empathy with concrete action is needed.
 
 RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
 {
@@ -136,7 +136,7 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
     difficulty: 'medium',
     patientName: 'Emma Sullivan',
     patientAge: 28,
-    icon: '💙',
+    icon: 'M',
     initialIntensity: 0.70,
     maxTurns: 10,
 
@@ -144,7 +144,7 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
       'Emma is a freelance graphic designer who lives alone. She has been struggling since a relationship breakdown six months ago. Her GP referred her after she missed two previous appointments. She has never spoken openly about her mental health before.',
 
     clinicalContext:
-      'Emma is here — that took courage. Your priority is not to diagnose or prescribe, but to keep her engaged and help her feel safe enough to open up. She will retreat quickly if she feels processed or judged.',
+      'Emma is here, that took courage. Your priority is not to diagnose or prescribe, but to keep her engaged and help her feel safe enough to open up. She will retreat quickly if she feels processed or judged.',
 
     sessionGoal:
       'Help Emma feel genuinely heard and safe enough to begin sharing what she is experiencing.',
@@ -183,7 +183,7 @@ WHAT MAKES YOU CALMER: Not being rushed. Genuine curiosity rather than clinical 
 
 WHAT MAKES YOU MORE DISTRESSED: Interrogation-style questions. Being told how to feel. Clinical language that creates distance. Feeling like a case number.
 
-DIFFICULTY: medium — starts withdrawn, opens up gradually with sustained warmth. Retreats quickly if she feels judged.
+DIFFICULTY: medium. Starts withdrawn, opens up gradually with sustained warmth. Retreats quickly if she feels judged.
 
 RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
 {
@@ -200,7 +200,7 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
     difficulty: 'medium',
     patientName: 'Robert Tan',
     patientAge: 58,
-    icon: '🍎',
+    icon: 'B',
     initialIntensity: 0.35,
     maxTurns: 10,
 
@@ -208,13 +208,13 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
       'Robert is a retired contractor and widower. He has had type 2 diabetes for 8 years. He has been non-adherent with medication and diet. Multiple doctors have lectured him, making him increasingly defensive.',
 
     clinicalContext:
-      'This is Robert\'s quarterly review — his HbA1c is significantly elevated. Direct confrontation has failed before. This calls for Motivational Interviewing: explore his own readiness and reasons for change, rather than prescribing solutions.',
+      'This is Robert\'s quarterly review, his HbA1c is significantly elevated. Direct confrontation has failed before. This calls for Motivational Interviewing: explore his own readiness and reasons for change, rather than prescribing solutions.',
 
     sessionGoal:
       'Help Robert identify his own reasons to make a change and leave with one small, self-chosen concrete step forward.',
 
     objectives: [
-      'Ask what he already knows and what concerns him — don\'t lecture',
+      'Ask what he already knows and what concerns him, don\'t lecture',
       'Explore ambivalence: "What would change for you if things stayed the same?"',
       'Affirm something he is already doing well',
     ],
@@ -233,7 +233,7 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
     ],
 
     openingLine:
-      "I know, I know — you're going to tell me my blood sugar is too high again. I've heard the speech before. I'm not a child, I understand the risks.",
+      "I know, I know, you're going to tell me my blood sugar is too high again. I've heard the speech before. I'm not a child, I understand the risks.",
 
     systemPrompt: `You are roleplaying as Robert Tan, a 58-year-old retired contractor, in a clinical communication training simulation for healthcare students. Stay fully in character. Never break character. Never mention you are an AI.
 
@@ -247,7 +247,7 @@ WHAT MAKES YOU CALMER: Being treated as an intelligent adult. Motivational rathe
 
 WHAT MAKES YOU MORE DISTRESSED: Lectures. Being spoken to like a child. Scary statistics. Feeling like a bad patient.
 
-DIFFICULTY: medium — starts resistant but gradually lowers his guard if student uses open questions, reflective listening, and explores ambivalence.
+DIFFICULTY: medium. Starts resistant but gradually lowers his guard if student uses open questions, reflective listening, and explores ambivalence.
 
 RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
 {
