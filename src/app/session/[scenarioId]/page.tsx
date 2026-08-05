@@ -47,6 +47,7 @@ function BriefingScreen({
   onBegin: () => void;
 }) {
   const diffColor = DIFF_COLORS[scenario.difficulty];
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -103,6 +104,7 @@ function BriefingScreen({
               <Avatar
                 emotion="neutral"
                 intensity={scenario.initialIntensity}
+                variant={scenario.avatarVariant}
                 size={200}
               />
             </div>
@@ -217,9 +219,14 @@ function BriefingScreen({
 
             {/* CTA */}
             <div style={{ paddingTop: 8 }}>
+              <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', maxWidth: 520, marginBottom: 16, fontSize: 12, lineHeight: 1.5, color: 'var(--text-2)' }}>
+                <input type="checkbox" checked={privacyAccepted} onChange={event => setPrivacyAccepted(event.target.checked)} style={{ marginTop: 3 }} />
+                <span>I understand this is an educational AI simulation. My transcript is sent to Gemini for a response and formative feedback, so I will not enter real patient names or identifiable information.</span>
+              </label>
               <button
                 id="btn-begin-session"
                 onClick={onBegin}
+                disabled={!privacyAccepted}
                 style={{
                   padding: '14px 32px',
                   background: 'var(--accent)',
@@ -228,12 +235,13 @@ function BriefingScreen({
                   borderRadius: 'var(--r)',
                   fontSize: 15,
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: privacyAccepted ? 'pointer' : 'not-allowed',
                   fontFamily: 'inherit',
                   transition: 'opacity 0.15s',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 10,
+                  opacity: privacyAccepted ? 1 : 0.45,
                 }}
                 onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
                 onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
@@ -271,6 +279,7 @@ function ActiveSession({
   const [micSupported, setMicSupported] = useState(true);
   const [patientTurnCount, setPatientTurnCount] = useState(0);
   const [lastPatientText, setLastPatientText] = useState(scenario.openingLine);
+  const [requestError, setRequestError] = useState('');
 
   const recognitionRef = useRef<any>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
@@ -313,6 +322,7 @@ function ActiveSession({
     if (!input.trim() || isLoading) return;
     const txt = input.trim();
     setInput('');
+    setRequestError('');
     cancelSpeech();
     setIsSpeaking(false);
 
@@ -327,7 +337,7 @@ function ActiveSession({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenarioId: scenario.id, history: next, studentMessage: txt }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         const emo = data.emotion as EmotionType;
         const pt: Turn = {
@@ -340,9 +350,14 @@ function ActiveSession({
         setLastPatientText(data.reply);
         setPatientTurnCount(c => c + 1);
         speak(data.reply, emo);
+      } else {
+        setInput(txt);
+        setRequestError(data.error ?? 'The simulated patient could not respond. Please try again.');
       }
     } catch (err) {
       console.error(err);
+      setInput(txt);
+      setRequestError('Network error. Check that the development server is running, then try again.');
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();
@@ -532,6 +547,7 @@ function ActiveSession({
             <Avatar
               emotion={emotion}
               intensity={intensity}
+              variant={scenario.avatarVariant}
               isSpeaking={isSpeaking}
               isListening={isMicActive}
               size={280}
@@ -666,8 +682,13 @@ function ActiveSession({
       <div className="input-area" style={{
         flexShrink: 0, padding: '24px',
         borderTop: '1px solid var(--border)', background: 'var(--surface)',
-        display: 'flex', justifyContent: 'center',
+        display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center',
       }}>
+        {requestError && (
+          <div role="alert" style={{ width: '100%', maxWidth: 480, marginBottom: 12, padding: '10px 12px', borderRadius: 'var(--r)', background: 'var(--danger-bg)', border: '1px solid var(--danger)', color: 'var(--text-1)', fontSize: 12 }}>
+            {requestError}
+          </div>
+        )}
         <Tabs className="tabs-container" defaultValue="voice" style={{ width: '100%', maxWidth: 480, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
           
           <TabsContent value="voice" style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, minHeight: 140, justifyContent: 'center', outline: 'none' }}>
@@ -693,7 +714,7 @@ function ActiveSession({
             </div>
             {isMicActive && input && (
               <div style={{ fontSize: 13, color: 'var(--text-2)', maxWidth: 300, textAlign: 'center', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                "{input}"
+                &ldquo;{input}&rdquo;
               </div>
             )}
           </TabsContent>
@@ -784,6 +805,17 @@ export default function SessionPage({ params }: { params: Promise<{ scenarioId: 
     <div style={{ background: 'var(--bg)', minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
       <p style={{ color: 'var(--text-1)' }}>Scenario not found.</p>
       <Link href="/" style={{ color: 'var(--accent)', fontSize: 14 }}>Back to scenarios</Link>
+    </div>
+  );
+
+  if (scenario.availability !== 'available') return (
+    <div style={{ background: 'var(--bg)', minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ maxWidth: 560, padding: 32, border: '1px solid var(--border)', borderRadius: 'var(--r)', background: 'var(--surface)' }}>
+        <p className="font-mono" style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--warn)' }}>FACULTY REVIEW REQUIRED</p>
+        <h1 style={{ color: 'var(--text-1)', fontSize: 28 }}>{scenario.title}</h1>
+        <p style={{ color: 'var(--text-2)', lineHeight: 1.6 }}>{scenario.safetyNote}</p>
+        <Link href="/" style={{ color: 'var(--accent)', fontSize: 14 }}>Back to available scenarios</Link>
+      </div>
     </div>
   );
 
