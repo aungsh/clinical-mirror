@@ -81,9 +81,9 @@ export default function FeedbackPage() {
     <div style={{ background: 'var(--bg)', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
 
       {/* Nav */}
-      <header style={{
+      <header className="header-container" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 40px', borderBottom: '1px solid var(--border)',
+        borderBottom: '1px solid var(--border)',
         background: 'var(--bg)', flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -113,11 +113,11 @@ export default function FeedbackPage() {
         </Link>
       </header>
 
-      <main style={{ flex: 1, padding: '48px 40px', maxWidth: 960, width: '100%', margin: '0 auto' }}>
+      <main className="main-container" style={{ flex: 1, maxWidth: 960, width: '100%', margin: '0 auto' }}>
 
         {/* ── Hero: scenario + overall score ── */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: '1fr auto', gap: 48,
+        <div className="hero-grid" style={{
+          display: 'grid',
           alignItems: 'start', marginBottom: 56,
           paddingBottom: 48, borderBottom: '1px solid var(--border)',
         }}>
@@ -125,7 +125,7 @@ export default function FeedbackPage() {
             <p className="font-mono" style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.12em', marginBottom: 10 }}>
               {scenario.title.toUpperCase()}
             </p>
-            <p style={{ fontSize: 32, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-1)', margin: '0 0 12px' }}>
+            <p className="hero-title" style={{ fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-1)', margin: '0 0 12px' }}>
               {feedback.summary}
             </p>
             <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -155,7 +155,7 @@ export default function FeedbackPage() {
           <p className="font-mono" style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.12em', marginBottom: 20 }}>
             SCORE BREAKDOWN
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, background: 'var(--border)' }}>
+          <div className="score-grid" style={{ display: 'grid', gap: 1, background: 'var(--border)' }}>
             {SCORE_CONFIGS.map((cfg, i) => (
               <div key={cfg.key} style={{
                 background: 'var(--surface)',
@@ -220,7 +220,7 @@ export default function FeedbackPage() {
         )}
 
         {/* ── Strengths + Improvements ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 48 }}>
+        <div className="feedback-grid" style={{ display: 'grid', gap: 24, marginBottom: 48 }}>
 
           {/* Strengths */}
           <section>
@@ -331,6 +331,23 @@ export default function FeedbackPage() {
           </Link>
         </div>
       </main>
+      <style>{`
+        .header-container { padding: 16px 40px; }
+        .main-container { padding: 48px 40px; }
+        .hero-grid { grid-template-columns: 1fr auto; gap: 48px; }
+        .hero-title { font-size: 32px; }
+        .score-grid { grid-template-columns: repeat(3, 1fr); }
+        .feedback-grid { grid-template-columns: 1fr 1fr; }
+        
+        @media (max-width: 768px) {
+          .header-container { padding: 16px 20px; }
+          .main-container { padding: 24px 20px; }
+          .hero-grid { grid-template-columns: 1fr; gap: 24px; }
+          .hero-title { font-size: 24px !important; }
+          .score-grid { grid-template-columns: 1fr; }
+          .feedback-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+        }
+      `}</style>
     </div>
   );
 }

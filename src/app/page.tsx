@@ -18,14 +18,10 @@ export default function HomePage() {
       }}
     >
       {/* Nav */}
-      <nav
+      <nav className="nav-container"
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "18px 40px",
-          borderBottom: "1px solid var(--border)",
-          background: "var(--bg)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          borderBottom: "1px solid var(--border)", background: "var(--bg)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -64,20 +60,16 @@ export default function HomePage() {
         </span>
       </nav>
 
-      <main style={{ flex: 1, padding: "0 40px" }}>
+      <main className="main-container" style={{ flex: 1 }}>
         {/* Hero: asymmetric split */}
-        <div
+        <div className="hero-grid"
           style={{
-            display: "grid",
-            gridTemplateColumns: "1fr auto",
-            gap: 40,
-            alignItems: "end",
-            padding: "72px 0 56px",
+            display: "grid", alignItems: "end",
             borderBottom: "1px solid var(--border)",
           }}
         >
           <div>
-            <h1
+            <h1 className="hero-title"
               style={{
                 fontSize: "clamp(48px, 7vw, 80px)",
                 fontWeight: 700,
@@ -107,14 +99,10 @@ export default function HomePage() {
           </div>
 
           {/* Right: metadata column */}
-          <div
+          <div className="hero-stats"
             style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 20,
-              textAlign: "right",
-              paddingBottom: 4,
-              flexShrink: 0,
+              display: "flex", flexDirection: "column", gap: 20,
+              paddingBottom: 4, flexShrink: 0,
             }}
           >
             <div>
@@ -170,20 +158,15 @@ export default function HomePage() {
                 id={`scenario-row-${scenario.id}`}
                 className="scenario-row"
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 32,
+                  display: "flex", alignItems: "center",
                   borderBottom: "1px solid var(--border)",
-                  textDecoration: "none",
-                  transition: "background 0.15s ease",
+                  textDecoration: "none", transition: "background 0.15s ease",
                   cursor: "pointer",
-                  margin: "0 -40px",
-                  padding: "28px 40px",
                 }}
               >
                 {/* Number */}
                 <span
-                  className="font-mono"
+                  className="font-mono scenario-number"
                   style={{
                     fontSize: 12,
                     color: "var(--text-3)",
@@ -242,13 +225,10 @@ export default function HomePage() {
       </main>
 
       {/* Footer */}
-      <footer
+      <footer className="footer-container"
         style={{
-          padding: "20px 40px",
           borderTop: "1px solid var(--border-sub)",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
         }}
       >
         <span style={{ fontSize: 12, color: "var(--text-3)" }}>
@@ -269,6 +249,24 @@ export default function HomePage() {
       <style>{`
         .scenario-row:hover {
           background: var(--surface) !important;
+        }
+        .main-container { padding: 0 40px; }
+        .nav-container { padding: 18px 40px; }
+        .hero-grid { grid-template-columns: 1fr auto; gap: 40px; padding: 72px 0 56px; }
+        .hero-stats { text-align: right; }
+        .scenario-row { padding: 28px 40px; margin: 0 -40px; gap: 32px; }
+        .scenario-number { display: block; }
+        .footer-container { padding: 20px 40px; }
+        
+        @media (max-width: 768px) {
+          .main-container { padding: 0 20px; }
+          .nav-container { padding: 16px 20px; }
+          .hero-grid { grid-template-columns: 1fr; gap: 24px; padding: 40px 0 32px; }
+          .hero-stats { text-align: left; flex-direction: row; gap: 32px; }
+          .scenario-row { padding: 20px 20px; margin: 0 -20px; gap: 16px; align-items: flex-start; }
+          .scenario-number { display: none; }
+          .footer-container { padding: 20px 20px; }
+          .hero-title { font-size: clamp(36px, 10vw, 48px) !important; }
         }
       `}</style>
     </div>

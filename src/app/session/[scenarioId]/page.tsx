@@ -412,13 +412,13 @@ function ActiveSession({
       </div>
 
       {/* Top bar */}
-      <header style={{
+      <header className="header-bar" style={{
         display: 'flex', alignItems: 'center', gap: 16,
         padding: '12px 24px', flexShrink: 0,
         borderBottom: '1px solid var(--border)',
         background: 'var(--surface)',
       }}>
-        <span style={{ fontSize: 13, color: 'var(--text-2)', flex: 1 }}>
+        <span className="header-title" style={{ fontSize: 13, color: 'var(--text-2)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {scenario.patientName} · {scenario.title}
         </span>
 
@@ -480,6 +480,7 @@ function ActiveSession({
             color: 'var(--danger)',
             cursor: 'pointer', fontFamily: 'inherit',
             transition: 'opacity 0.15s',
+            marginLeft: 'auto',
           }}
           onMouseEnter={e => e.currentTarget.style.opacity = '0.75'}
           onMouseLeave={e => e.currentTarget.style.opacity = '1'}
@@ -489,10 +490,10 @@ function ActiveSession({
       </header>
 
       {/* Content */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
 
         {/* Center stage */}
-        <div style={{
+        <div className="main-stage" style={{
           flex: 1, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           gap: 20, padding: '16px 24px', overflow: 'hidden',
@@ -526,7 +527,7 @@ function ActiveSession({
           </div>
 
           {/* Avatar */}
-          <div className="animate-breathe">
+          <div className="animate-breathe avatar-wrapper">
             <Avatar
               emotion={emotion}
               intensity={intensity}
@@ -565,10 +566,11 @@ function ActiveSession({
 
         {/* Side panel */}
         {activePanel !== 'none' && (
-          <div style={{
+          <div className="side-panel" style={{
             width: 320, borderLeft: '1px solid var(--border)',
             display: 'flex', flexDirection: 'column',
             background: 'var(--surface)', flexShrink: 0,
+            zIndex: 50,
           }}>
             {activePanel === 'transcript' && (
               <>
@@ -660,12 +662,12 @@ function ActiveSession({
       </div>
 
       {/* Siri-style Input Area using Tabs */}
-      <div style={{
+      <div className="input-area" style={{
         flexShrink: 0, padding: '24px',
         borderTop: '1px solid var(--border)', background: 'var(--surface)',
         display: 'flex', justifyContent: 'center',
       }}>
-        <Tabs defaultValue="voice" style={{ width: '100%', maxWidth: 480, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+        <Tabs className="tabs-container" defaultValue="voice" style={{ width: '100%', maxWidth: 480, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
           
           <TabsContent value="voice" style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, minHeight: 140, justifyContent: 'center', outline: 'none' }}>
             <button
@@ -739,6 +741,29 @@ function ActiveSession({
           </TabsList>
         </Tabs>
       </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .side-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 100% !important;
+            max-width: 320px;
+            box-shadow: -4px 0 24px rgba(0,0,0,0.1);
+          }
+          .header-bar {
+            padding: 12px 16px !important;
+            gap: 8px !important;
+          }
+          .header-title { display: none !important; }
+          .main-stage { padding: 16px !important; }
+          .avatar-wrapper { transform: scale(0.75); margin: -20px 0; }
+          .input-area { padding: 16px !important; }
+          .tabs-container { max-width: 100% !important; }
+        }
+      `}</style>
     </div>
   );
 }
