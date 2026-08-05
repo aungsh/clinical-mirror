@@ -12,13 +12,13 @@ import { speakEmotional, cancelSpeech, initVoices } from '@/lib/tts';
 /* ─── Constants ─────────────────────────────────────────────────────────── */
 
 const EMOTION_COLORS: Record<EmotionType, string> = {
-  neutral:    '#22c55e',
-  sad:        '#60a5fa',
-  angry:      '#f87171',
-  anxious:    '#fb923c',
-  distressed: '#f87171',
-  relieved:   '#22c55e',
-  calm:       '#a78bfa',
+  neutral:    '#9eb299',
+  sad:        '#9ec5f2',
+  angry:      '#f49797',
+  anxious:    '#fab475',
+  distressed: '#f49797',
+  relieved:   '#9eb299',
+  calm:       '#d3aef6',
 };
 
 const EMOTION_LABELS: Record<EmotionType, string> = {
@@ -27,9 +27,9 @@ const EMOTION_LABELS: Record<EmotionType, string> = {
 };
 
 const DIFF_COLORS = {
-  easy:   '#22c55e',
-  medium: '#fb923c',
-  hard:   '#f87171',
+  easy:   '#9eb299',
+  medium: '#fab475',
+  hard:   '#f49797',
 };
 
 type Stage = 'brief' | 'active';
@@ -182,13 +182,13 @@ function BriefingScreen({
             {/* Do / Avoid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
               <div>
-                <p className="font-mono" style={{ fontSize: 10, color: '#22c55e', letterSpacing: '0.12em', marginBottom: 10 }}>
+                <p className="font-mono" style={{ fontSize: 10, color: 'var(--primary)', letterSpacing: '0.12em', marginBottom: 10 }}>
                   TRY THIS
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                   {scenario.doList.map((item, i) => (
                     <div key={i} style={{ display: 'flex', gap: 8, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.4 }}>
-                      <span style={{ color: '#22c55e50', flexShrink: 0 }}>+</span>
+                      <span style={{ color: 'var(--primary)', opacity: 0.6, flexShrink: 0 }}>+</span>
                       {item}
                     </div>
                   ))}
@@ -196,13 +196,13 @@ function BriefingScreen({
               </div>
 
               <div>
-                <p className="font-mono" style={{ fontSize: 10, color: '#f87171', letterSpacing: '0.12em', marginBottom: 10 }}>
+                <p className="font-mono" style={{ fontSize: 10, color: 'var(--destructive)', letterSpacing: '0.12em', marginBottom: 10 }}>
                   AVOID THIS
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                   {scenario.avoidList.map((item, i) => (
                     <div key={i} style={{ display: 'flex', gap: 8, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.4 }}>
-                      <span style={{ color: '#f8717150', flexShrink: 0 }}>-</span>
+                      <span style={{ color: 'var(--destructive)', opacity: 0.6, flexShrink: 0 }}>-</span>
                       {item}
                     </div>
                   ))}
@@ -687,7 +687,7 @@ export default function SessionPage({ params }: { params: Promise<{ scenarioId: 
 
       {isEnding && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(10,10,10,0.92)',
+          position: 'fixed', inset: 0, background: 'rgba(253,251,247,0.92)',
           backdropFilter: 'blur(12px)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, zIndex: 50,
         }}>

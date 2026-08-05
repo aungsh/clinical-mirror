@@ -7,60 +7,60 @@
 
 :root {
   /* Backgrounds */
-  --bg:          #0a0a0a;
-  --surface:     #111111;
-  --surface-2:   #1a1a1a;
-  --surface-3:   #222222;
+  --bg:          #fdfbf7;
+  --surface:     #ffffff;
+  --surface-2:   #f4f2ec;
+  --surface-3:   #ebeae4;
 
   /* Borders */
-  --border:      #2a2a2a;
-  --border-sub:  #1c1c1c;
+  --border:      #e2dfd5;
+  --border-sub:  #eceae1;
 
   /* Text */
-  --text-1:      #f0f0ee;
-  --text-2:      #848484;
-  --text-3:      #404040;
+  --text-1:      #2d2b2a;
+  --text-2:      #5e5c58;
+  --text-3:      #8f8c86;
 
-  /* Accent: single restrained green (used throughout all pages) */
-  --accent:      #22c55e;
-  --accent-bg:   rgba(34, 197, 94, 0.07);
-  --accent-bd:   rgba(34, 197, 94, 0.18);
-  --accent-dim:  #16a34a;
-  --accent-surface: #1a1a1a; /* shadcn menu hover surface */
+  /* Accent: pastel sage */
+  --accent:      #9eb299;
+  --accent-bg:   rgba(158, 178, 153, 0.15);
+  --accent-bd:   rgba(158, 178, 153, 0.35);
+  --accent-dim:  #879c82;
+  --accent-surface: #e9ede7;
 
   /* Semantic */
-  --danger:      #f87171;
-  --danger-bg:   rgba(248, 113, 113, 0.08);
-  --danger-bd:   rgba(248, 113, 113, 0.2);
-  --warn:        #fb923c;
+  --danger:      #f49797;
+  --danger-bg:   rgba(244, 151, 151, 0.15);
+  --danger-bd:   rgba(244, 151, 151, 0.3);
+  --warn:        #fab475;
 
-  /* Shape - one scale, used everywhere */
+  /* Shape */
   --r:           6px;
 
   /* shadcn compat overrides */
   --radius:      0.375rem;
-  --background:  #0a0a0a;
-  --foreground:  #f0f0ee;
-  --card:        #111111;
-  --card-foreground: #f0f0ee;
-  --popover:     #111111;
-  --popover-foreground: #f0f0ee;
-  --primary:     #22c55e;
-  --primary-foreground: #0a0a0a;
-  --secondary:   #1a1a1a;
-  --secondary-foreground: #f0f0ee;
-  --muted:       #1a1a1a;
-  --muted-foreground: #848484;
-  --accent-foreground: #f0f0ee;
-  --destructive: #f87171;
-  --border:      #2a2a2a;
-  --input:       #1a1a1a;
-  --ring:        #22c55e;
-  --chart-1:     #22c55e;
-  --chart-2:     #60a5fa;
-  --chart-3:     #fb923c;
-  --chart-4:     #f87171;
-  --chart-5:     #c084fc;
+  --background:  #fdfbf7;
+  --foreground:  #2d2b2a;
+  --card:        #ffffff;
+  --card-foreground: #2d2b2a;
+  --popover:     #ffffff;
+  --popover-foreground: #2d2b2a;
+  --primary:     #9eb299;
+  --primary-foreground: #ffffff;
+  --secondary:   #f4f2ec;
+  --secondary-foreground: #2d2b2a;
+  --muted:       #f4f2ec;
+  --muted-foreground: #5e5c58;
+  --accent-foreground: #2d2b2a;
+  --destructive: #f49797;
+  --border:      #e2dfd5;
+  --input:       #f4f2ec;
+  --ring:        #9eb299;
+  --chart-1:     #9eb299;
+  --chart-2:     #9ec5f2;
+  --chart-3:     #fab475;
+  --chart-4:     #f49797;
+  --chart-5:     #d3aef6;
 }
 
 /* ── Reset ─────────────────────────────────────────────── */
@@ -70,7 +70,7 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -87,8 +87,8 @@ body {
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: #333; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
 
 /* ── Typography helpers ─────────────────────────────────── */
 

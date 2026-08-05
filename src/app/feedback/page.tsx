@@ -15,9 +15,9 @@ const EMOTION_LABELS: Record<EmotionType, string> = {
 };
 
 const SCORE_CONFIGS = [
-  { key: 'empathy'      as const, label: 'Empathy',       color: '#60a5fa' },
-  { key: 'clarity'      as const, label: 'Clarity',        color: '#22c55e' },
-  { key: 'deescalation' as const, label: 'De-escalation',  color: '#fb923c' },
+  { key: 'empathy'      as const, label: 'Empathy',       color: '#9ec5f2' },
+  { key: 'clarity'      as const, label: 'Clarity',        color: '#9eb299' },
+  { key: 'deescalation' as const, label: 'De-escalation',  color: '#fab475' },
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,7 +74,7 @@ export default function FeedbackPage() {
   const avg = Math.round(
     (feedback.scores.empathy + feedback.scores.clarity + feedback.scores.deescalation) / 3
   );
-  const avgColor = avg >= 7 ? '#22c55e' : avg >= 5 ? '#fb923c' : '#f87171';
+  const avgColor = avg >= 7 ? '#9eb299' : avg >= 5 ? '#fab475' : '#f49797';
   const studentTurns = turns.filter(t => t.speaker === 'student').length;
 
   return (
@@ -203,14 +203,14 @@ export default function FeedbackPage() {
             }}>
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={chartData} margin={{ top: 4, right: 16, left: -20, bottom: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1c1c1c" />
-                  <XAxis dataKey="turn" tick={{ fill: '#404040', fontSize: 11 }} />
-                  <YAxis domain={[0, 100]} tick={{ fill: '#404040', fontSize: 11 }} tickFormatter={v => `${v}%`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="turn" tick={{ fill: 'var(--text-3)', fontSize: 11 }} />
+                  <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-3)', fontSize: 11 }} tickFormatter={v => `${v}%`} />
                   <Tooltip content={<ChartTooltip />} />
                   <Line
-                    type="monotone" dataKey="intensity" stroke="#22c55e"
+                    type="monotone" dataKey="intensity" stroke="#9eb299"
                     strokeWidth={2}
-                    dot={{ r: 3, fill: '#22c55e', stroke: 'var(--surface)', strokeWidth: 2 }}
+                    dot={{ r: 3, fill: '#9eb299', stroke: 'var(--surface)', strokeWidth: 2 }}
                     activeDot={{ r: 5 }}
                   />
                 </LineChart>
@@ -224,7 +224,7 @@ export default function FeedbackPage() {
 
           {/* Strengths */}
           <section>
-            <p className="font-mono" style={{ fontSize: 10, color: '#22c55e', letterSpacing: '0.12em', marginBottom: 16 }}>
+            <p className="font-mono" style={{ fontSize: 10, color: 'var(--primary)', letterSpacing: '0.12em', marginBottom: 16 }}>
               WHAT WORKED
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -233,7 +233,7 @@ export default function FeedbackPage() {
                   display: 'flex', gap: 14, fontSize: 13, lineHeight: 1.5,
                   paddingBottom: 12, borderBottom: '1px solid var(--border-sub)',
                 }}>
-                  <span className="font-mono" style={{ fontSize: 10, color: '#22c55e50', paddingTop: 2, flexShrink: 0 }}>
+                  <span className="font-mono" style={{ fontSize: 10, color: 'var(--primary)', opacity: 0.6, paddingTop: 2, flexShrink: 0 }}>
                     {String(i + 1).padStart(2, '0')}
                   </span>
                   <span style={{ color: 'var(--text-2)' }}>{s}</span>
@@ -244,7 +244,7 @@ export default function FeedbackPage() {
 
           {/* Improvements */}
           <section>
-            <p className="font-mono" style={{ fontSize: 10, color: '#fb923c', letterSpacing: '0.12em', marginBottom: 16 }}>
+            <p className="font-mono" style={{ fontSize: 10, color: 'var(--warn)', letterSpacing: '0.12em', marginBottom: 16 }}>
               AREAS TO IMPROVE
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -255,7 +255,7 @@ export default function FeedbackPage() {
                   <p style={{
                     fontSize: 12, fontStyle: 'italic', color: 'var(--text-3)',
                     margin: '0 0 6px',
-                    paddingLeft: 10, borderLeft: '2px solid #fb923c30',
+                    paddingLeft: 10, borderLeft: '2px solid var(--warn)', opacity: 0.7,
                     lineHeight: 1.5,
                   }}>
                     "{imp.moment}"

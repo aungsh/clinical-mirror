@@ -2,9 +2,9 @@ import Link from 'next/link';
 import { scenarios } from '@/lib/scenarios';
 
 const DIFF = {
-  easy:   { label: 'Easy',   color: '#22c55e' },
-  medium: { label: 'Medium', color: '#fb923c' },
-  hard:   { label: 'Hard',   color: '#f87171' },
+  easy:   { label: 'Easy',   color: '#9eb299' },
+  medium: { label: 'Medium', color: '#fab475' },
+  hard:   { label: 'Hard',   color: '#f49797' },
 };
 
 export default function HomePage() {

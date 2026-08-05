@@ -167,7 +167,7 @@ export function Avatar({
         viewBox="0 0 200 220"
         width={size}
         height={size}
-        style={{ filter: 'drop-shadow(0 6px 28px rgba(0,0,0,0.5))' }}
+        style={{ filter: 'drop-shadow(0 6px 28px rgba(0,0,0,0.15))' }}
         aria-label={`Patient avatar showing ${emotion} expression`}
       >
         {/* ── Body / shirt hint ── */}
