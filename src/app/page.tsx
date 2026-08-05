@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { scenarios } from "@/lib/scenarios";
+import { scenarios } from "@/lib/scenario-catalog";
 
 const DIFF = {
   easy: { label: "Easy", color: "#9eb299" },

@@ -23,8 +23,10 @@ export interface Scenario {
   patientName: string;
   patientAge: number;
   icon: string;
-  systemPrompt: string;
   openingLine: string;
+  avatarVariant: 'margaret' | 'james' | 'emma' | 'robert';
+  availability: 'available' | 'faculty-review';
+  safetyNote?: string;
 
   // Briefing fields
   patientBackground: string;   // who this person is

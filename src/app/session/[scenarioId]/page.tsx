@@ -1,11 +1,12 @@
 'use client';
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
 import { use, useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mic, Square, Volume2, VolumeX, ArrowUp } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { scenarios } from '@/lib/scenarios';
+import { scenarios } from '@/lib/scenario-catalog';
 import { Turn, EmotionType } from '@/lib/types';
 import { Avatar } from '@/components/Avatar';
 import { VoiceOrb } from '@/components/VoiceOrb';
