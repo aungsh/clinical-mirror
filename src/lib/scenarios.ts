@@ -1,6 +1,11 @@
+import 'server-only';
 import { Scenario } from './types';
 
-export const scenarios: Scenario[] = [
+export interface ServerScenario extends Scenario {
+  systemPrompt: string;
+}
+
+export const scenarios: ServerScenario[] = [
   {
     id: 'bad-news',
     title: 'Breaking Bad News',
@@ -9,6 +14,8 @@ export const scenarios: Scenario[] = [
     patientName: 'Margaret Chen',
     patientAge: 52,
     icon: 'C',
+    avatarVariant: 'margaret',
+    availability: 'available',
     initialIntensity: 0.75,
     maxTurns: 10,
 
@@ -73,6 +80,8 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
     patientName: 'James Morrison',
     patientAge: 45,
     icon: 'H',
+    avatarVariant: 'james',
+    availability: 'available',
     initialIntensity: 0.85,
     maxTurns: 10,
 
@@ -137,6 +146,9 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
     patientName: 'Emma Sullivan',
     patientAge: 28,
     icon: 'M',
+    avatarVariant: 'emma',
+    availability: 'faculty-review',
+    safetyNote: 'Held for faculty review because crisis escalation and safeguarding paths must be validated before learner use.',
     initialIntensity: 0.70,
     maxTurns: 10,
 
@@ -201,6 +213,8 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
     patientName: 'Robert Tan',
     patientAge: 58,
     icon: 'B',
+    avatarVariant: 'robert',
+    availability: 'available',
     initialIntensity: 0.35,
     maxTurns: 10,
 
