@@ -104,7 +104,7 @@ export function Avatar({
         if (eyeGroupRef.current) {
           eyeGroupRef.current.style.animation = 'none';
           // Trigger reflow
-          void eyeGroupRef.current.offsetHeight;
+          void eyeGroupRef.current.getBoundingClientRect();
           eyeGroupRef.current.style.animation = 'blink 0.22s ease-in-out';
           setTimeout(() => {
             if (eyeGroupRef.current) eyeGroupRef.current.style.animation = '';
