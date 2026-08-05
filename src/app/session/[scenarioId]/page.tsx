@@ -4,6 +4,7 @@ import { use, useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mic, Square, Volume2, VolumeX, ArrowUp } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { scenarios } from '@/lib/scenarios';
 import { Turn, EmotionType } from '@/lib/types';
 import { Avatar } from '@/components/Avatar';
@@ -265,6 +266,7 @@ function ActiveSession({
   const [isMicActive, setIsMicActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [shouldAutoSend, setShouldAutoSend] = useState(false);
   const [micSupported, setMicSupported] = useState(true);
   const [patientTurnCount, setPatientTurnCount] = useState(0);
   const [lastPatientText, setLastPatientText] = useState(scenario.openingLine);
@@ -346,6 +348,16 @@ function ActiveSession({
     }
   };
 
+  useEffect(() => {
+    if (shouldAutoSend) {
+      if (input.trim() && !isLoading) {
+        sendMessage();
+      }
+      setShouldAutoSend(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldAutoSend, input, isLoading]);
+
   const toggleMic = () => {
     if (!micSupported) return;
     const W = window as unknown as Record<string, unknown>;
@@ -359,7 +371,10 @@ function ActiveSession({
       const t = e.results[0][0].transcript;
       setInput(p => p ? p + ' ' + t : t);
     };
-    rec.onend = () => setIsMicActive(false);
+    rec.onend = () => {
+      setIsMicActive(false);
+      setShouldAutoSend(true);
+    };
     rec.onerror = () => setIsMicActive(false);
     rec.start();
     recognitionRef.current = rec;
@@ -410,6 +425,20 @@ function ActiveSession({
         <span className="font-mono" style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.1em', flexShrink: 0 }}>
           {patientTurnCount}/{scenario.maxTurns}
         </span>
+
+        <button
+          onClick={() => { if (!isMuted) cancelSpeech(); setIsMuted(m => !m); }}
+          style={{
+            padding: '5px 10px', borderRadius: 'var(--r)',
+            background: 'var(--surface-2)', border: `1px solid ${isMuted ? 'var(--danger-bd)' : 'var(--border)'}`,
+            color: isMuted ? 'var(--danger)' : 'var(--text-3)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+            fontSize: 11, fontWeight: 600, transition: 'all 0.15s',
+          }}
+        >
+          {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+          {isMuted ? 'MUTED' : 'AUDIO'}
+        </button>
 
         <button
           id="btn-toggle-transcript"
@@ -563,83 +592,85 @@ function ActiveSession({
         )}
       </div>
 
-      {/* Input bar */}
+      {/* Siri-style Input Area using Tabs */}
       <div style={{
-        flexShrink: 0, display: 'flex', gap: 8, padding: '12px 20px',
+        flexShrink: 0, padding: '24px',
         borderTop: '1px solid var(--border)', background: 'var(--surface)',
-        alignItems: 'center',
+        display: 'flex', justifyContent: 'center',
       }}>
-        <button
-          id="btn-mute"
-          onClick={() => { if (!isMuted) cancelSpeech(); setIsMuted(m => !m); }}
-          style={{
-            width: 36, height: 36, borderRadius: 'var(--r)', flexShrink: 0,
-            background: 'var(--surface-2)',
-            border: `1px solid ${isMuted ? 'var(--danger-bd)' : 'var(--border)'}`,
-            color: isMuted ? 'var(--danger)' : 'var(--text-3)',
-            cursor: 'pointer', display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-            transition: 'border-color 0.15s, color 0.15s',
-          }}
-        >
-          {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-        </button>
+        <Tabs defaultValue="voice" style={{ width: '100%', maxWidth: 480, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          
+          <TabsContent value="voice" style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, minHeight: 140, justifyContent: 'center', outline: 'none' }}>
+            <button
+              onClick={toggleMic}
+              disabled={!micSupported || isLoading}
+              style={{
+                width: 90, height: 90, borderRadius: '50%',
+                background: isMicActive ? 'var(--danger-bg)' : 'var(--accent)',
+                color: isMicActive ? 'var(--danger)' : '#ffffff',
+                border: isMicActive ? '2px solid var(--danger)' : 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                boxShadow: isMicActive ? '0 0 30px rgba(244, 151, 151, 0.4)' : '0 8px 24px rgba(158, 178, 153, 0.4)',
+                transform: isMicActive ? 'scale(1.05)' : 'scale(1)',
+                opacity: (!micSupported || isLoading) ? 0.5 : 1,
+              }}
+            >
+              {isMicActive ? <Square size={32} fill="currentColor" /> : <Mic size={36} />}
+            </button>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>
+              {isMicActive ? 'Listening... tap to send' : 'Tap to speak'}
+            </div>
+            {isMicActive && input && (
+              <div style={{ fontSize: 13, color: 'var(--text-2)', maxWidth: 300, textAlign: 'center', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                "{input}"
+              </div>
+            )}
+          </TabsContent>
 
-        <button
-          id="btn-mic"
-          onClick={toggleMic}
-          disabled={!micSupported || isLoading}
-          style={{
-            width: 36, height: 36, borderRadius: 'var(--r)', flexShrink: 0,
-            background: isMicActive ? 'var(--danger-bg)' : 'var(--surface-2)',
-            border: `1px solid ${isMicActive ? 'var(--danger-bd)' : 'var(--border)'}`,
-            color: isMicActive ? 'var(--danger)' : 'var(--text-3)',
-            cursor: 'pointer', display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-            opacity: (!micSupported || isLoading) ? 0.4 : 1,
-            transition: 'all 0.15s',
-          }}
-        >
-          {isMicActive ? <Square size={18} fill="currentColor" /> : <Mic size={18} />}
-        </button>
+          <TabsContent value="text" style={{ width: '100%', outline: 'none' }}>
+            <div style={{
+              display: 'flex', gap: 8, alignItems: 'center',
+              background: 'var(--surface-2)', padding: '6px',
+              borderRadius: '8px', border: '1px solid var(--border)',
+            }}>
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                placeholder={`Type your response to ${scenario.patientName.split(' ')[0]}...`}
+                disabled={isLoading}
+                style={{
+                  flex: 1, height: 44, padding: '0 14px',
+                  background: 'transparent', border: 'none',
+                  fontSize: 14, color: 'var(--text-1)',
+                  outline: 'none', fontFamily: 'inherit',
+                  opacity: isLoading ? 0.5 : 1,
+                }}
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!input.trim() || isLoading}
+                style={{
+                  height: 44, padding: '0 20px', borderRadius: '6px',
+                  background: 'var(--accent)', border: 'none', color: '#ffffff',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  opacity: (!input.trim() || isLoading) ? 0.35 : 1,
+                  transition: 'opacity 0.15s',
+                }}
+              >
+                <ArrowUp size={20} strokeWidth={2.5} />
+              </button>
+            </div>
+          </TabsContent>
 
-        <input
-          ref={inputRef}
-          id="input-student-message"
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-          placeholder={isMicActive ? 'Listening...' : `Respond to ${scenario.patientName.split(' ')[0]}...`}
-          disabled={isLoading}
-          style={{
-            flex: 1, height: 36, padding: '0 14px',
-            background: 'var(--surface-2)', border: '1px solid var(--border)',
-            borderRadius: 'var(--r)', fontSize: 13, color: 'var(--text-1)',
-            outline: 'none', fontFamily: 'inherit',
-            transition: 'border-color 0.15s',
-            opacity: isLoading ? 0.5 : 1,
-          }}
-          onFocus={e => e.target.style.borderColor = 'var(--text-3)'}
-          onBlur={e => e.target.style.borderColor = 'var(--border)'}
-        />
-
-        <button
-          id="btn-send"
-          onClick={sendMessage}
-          disabled={!input.trim() || isLoading}
-          style={{
-            width: 36, height: 36, borderRadius: 'var(--r)', flexShrink: 0,
-            background: 'var(--accent)',
-            border: 'none', color: '#0a0a0a',
-            cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            opacity: (!input.trim() || isLoading) ? 0.35 : 1,
-            transition: 'opacity 0.15s',
-          }}
-        >
-          <ArrowUp size={20} strokeWidth={2.5} />
-        </button>
+          <TabsList style={{ marginTop: 8 }}>
+            <TabsTrigger value="voice">Voice</TabsTrigger>
+            <TabsTrigger value="text">Text</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
     </div>
   );
