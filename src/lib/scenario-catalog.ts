@@ -1,57 +1,156 @@
-import type { Scenario } from './types';
+import type { Scenario } from "./types";
 
 export const scenarios: Scenario[] = [
   {
-    id: 'bad-news', title: 'Breaking Bad News',
-    description: 'Deliver a serious cancer diagnosis to a patient who is anxious and unprepared.',
-    difficulty: 'hard', patientName: 'Margaret Chen', patientAge: 52, icon: 'C',
-    avatarVariant: 'margaret', availability: 'available', initialIntensity: 0.75, maxTurns: 10,
-    patientBackground: 'Margaret is a primary school teacher, married with two adult children. She has been healthy most of her life. She noticed a lump three weeks ago and came in for tests. This is her first serious health scare and she has been barely sleeping.',
-    clinicalContext: 'Margaret has been called back for results following a biopsy. She has stage 3 breast cancer. She does not yet know her diagnosis. Your role is to deliver this news compassionately and ensure she leaves feeling supported, not alone.',
-    sessionGoal: 'Deliver the diagnosis with compassion, give her space to react emotionally, and ensure she feels supported before any clinical next steps are discussed.',
-    objectives: ['Find out what Margaret already knows or suspects before you speak', 'Deliver the news gently in plain language (no jargon)', 'Pause after delivering the diagnosis and acknowledge her emotional response'],
-    doList: ['Start with "What have you been told so far?"', 'Give the news simply: "The results show it is cancer"', 'Stay silent after, let her react', 'Say "You are not going through this alone"'],
-    avoidList: ['Medical jargon', 'Minimising her concern', 'Rushing into treatment plans before she has processed the news'],
-    openingLine: "Doctor... they told me to come see you about my test results. I've been so worried all week. I haven't been sleeping at all.",
+    id: "bad-news",
+    title: "Breaking Bad News",
+    description:
+      "Deliver a serious cancer diagnosis to a patient who is anxious and unprepared.",
+    difficulty: "hard",
+    patientName: "Margaret Chen",
+    patientAge: 52,
+    icon: "C",
+    avatarVariant: "margaret",
+    availability: "available",
+    initialIntensity: 0.75,
+    maxTurns: 10,
+    patientBackground:
+      "Margaret is a primary school teacher, married with two adult children. She has been healthy most of her life. She noticed a lump three weeks ago and came in for tests. This is her first serious health scare and she has been barely sleeping.",
+    clinicalContext:
+      "Margaret has been called back for results following a biopsy. She has stage 3 breast cancer. She does not yet know her diagnosis. Your role is to deliver this news compassionately and ensure she leaves feeling supported, not alone.",
+    sessionGoal:
+      "Deliver the diagnosis with compassion, give her space to react emotionally, and ensure she feels supported before any clinical next steps are discussed.",
+    objectives: [
+      "Find out what Margaret already knows or suspects before you speak",
+      "Deliver the news gently in plain language (no jargon)",
+      "Pause after delivering the diagnosis and acknowledge her emotional response",
+    ],
+    doList: [
+      'Start with "What have you been told so far?"',
+      'Give the news simply: "The results show it is cancer"',
+      "Stay silent after, let her react",
+      'Say "You are not going through this alone"',
+    ],
+    avoidList: [
+      "Medical jargon",
+      "Minimising her concern",
+      "Rushing into treatment plans before she has processed the news",
+    ],
+    openingLine:
+      "Doctor... they told me to come see you about my test results. I've been so worried all week. I haven't been sleeping at all.",
   },
   {
-    id: 'angry-family', title: 'Angry Family Member',
-    description: 'De-escalate a frustrated son who feels his hospitalised father has been neglected.',
-    difficulty: 'hard', patientName: 'James Morrison', patientAge: 45, icon: 'H',
-    avatarVariant: 'james', availability: 'available', initialIntensity: 0.85, maxTurns: 10,
-    patientBackground: 'James is a senior manager who flew in from overseas when his father Thomas (78) was admitted. He has been at the hospital for 3 hours with no updates. He is the primary family decision-maker and is used to being in control.',
-    clinicalContext: 'Thomas is stable and receiving appropriate care. The problem is a communication failure. James received no updates for 12 hours. His anger is justified frustration, not unreasonableness. De-escalate by acknowledging him, not defending the system.',
-    sessionGoal: "De-escalate James's anger, acknowledge his frustration genuinely, and rebuild his trust by giving him a clear update on his father.",
-    objectives: ['Let him vent fully before responding, do not interrupt', 'Explicitly acknowledge his frustration and the wait', 'Give a concrete action step, not a vague promise'],
-    doList: ['Say his name and make eye contact', 'Acknowledge that the wait is not acceptable', 'Offer a specific next action', 'Ask what he needs most right now'],
-    avoidList: ['Telling him to calm down', 'Defending the system or making excuses', 'Vague promises without follow-through'],
-    openingLine: 'I have been waiting THREE hours. Three hours! I drove two hours to get here and nobody can tell me what is happening with my father. This is completely unacceptable.',
+    id: "angry-family",
+    title: "Angry Family Member",
+    description:
+      "De-escalate a frustrated son who feels his hospitalised father has been neglected.",
+    difficulty: "hard",
+    patientName: "James Morrison",
+    patientAge: 45,
+    icon: "H",
+    avatarVariant: "james",
+    availability: "available",
+    initialIntensity: 0.85,
+    maxTurns: 10,
+    patientBackground:
+      "James is a senior manager who flew in from overseas when his father Thomas (78) was admitted. He has been at the hospital for 3 hours with no updates. He is the primary family decision-maker and is used to being in control.",
+    clinicalContext:
+      "Thomas is stable and receiving appropriate care. The problem is a communication failure. James received no updates for 12 hours. His anger is justified frustration, not unreasonableness. De-escalate by acknowledging him, not defending the system.",
+    sessionGoal:
+      "De-escalate James's anger, acknowledge his frustration genuinely, and rebuild his trust by giving him a clear update on his father.",
+    objectives: [
+      "Let him vent fully before responding, do not interrupt",
+      "Explicitly acknowledge his frustration and the wait",
+      "Give a concrete action step, not a vague promise",
+    ],
+    doList: [
+      "Say his name and make eye contact",
+      "Acknowledge that the wait is not acceptable",
+      "Offer a specific next action",
+      "Ask what he needs most right now",
+    ],
+    avoidList: [
+      "Telling him to calm down",
+      "Defending the system or making excuses",
+      "Vague promises without follow-through",
+    ],
+    openingLine:
+      "I have been waiting THREE hours. Three hours! I drove two hours to get here and nobody can tell me what is happening with my father. This is completely unacceptable.",
   },
   {
-    id: 'mental-health', title: 'Mental Health Crisis',
-    description: 'Support a young patient experiencing severe anxiety and depression who is reluctant to engage.',
-    difficulty: 'medium', patientName: 'Emma Sullivan', patientAge: 28, icon: 'M',
-    avatarVariant: 'emma', availability: 'faculty-review', initialIntensity: 0.70, maxTurns: 10,
-    safetyNote: 'Held for faculty review because crisis escalation and safeguarding paths must be validated before learner use.',
-    patientBackground: 'Emma is a freelance graphic designer who lives alone. She has been struggling since a relationship breakdown six months ago. Her GP referred her after she missed two previous appointments. She has never spoken openly about her mental health before.',
-    clinicalContext: 'Emma is here, which took courage. The priority is not to diagnose or prescribe, but to keep her engaged and help her feel safe enough to open up.',
-    sessionGoal: 'Help Emma feel genuinely heard and safe enough to begin sharing what she is experiencing.',
-    objectives: ['Use open, curiosity-led questions', 'Reflect and validate without rushing to solutions', 'Create enough safety for her to open up'],
-    doList: ['Ask what has been hardest', 'Reflect back what you hear', 'Acknowledge the courage it took to attend', 'Tolerate silence'],
-    avoidList: ['Starting with a symptom checklist', 'Using clinical labels early', 'Pressing hard when she deflects'],
-    openingLine: "I... I don't really know why I'm here. My GP kept insisting I come but I don't think there's much anyone can do. I'm probably just wasting your time.",
+    id: "mental-health",
+    title: "Mental Health Crisis",
+    description:
+      "Support a young patient experiencing severe anxiety and depression who is reluctant to engage.",
+    difficulty: "medium",
+    patientName: "Emma Sullivan",
+    patientAge: 28,
+    icon: "M",
+    avatarVariant: "emma",
+    availability: "faculty-review",
+    initialIntensity: 0.7,
+    maxTurns: 10,
+    patientBackground:
+      "Emma is a freelance graphic designer who lives alone. She has been struggling since a relationship breakdown six months ago. Her GP referred her after she missed two previous appointments. She has never spoken openly about her mental health before.",
+    clinicalContext:
+      "Emma is here, which took courage. The priority is not to diagnose or prescribe, but to keep her engaged and help her feel safe enough to open up.",
+    sessionGoal:
+      "Help Emma feel genuinely heard and safe enough to begin sharing what she is experiencing.",
+    objectives: [
+      "Use open, curiosity-led questions",
+      "Reflect and validate without rushing to solutions",
+      "Create enough safety for her to open up",
+    ],
+    doList: [
+      "Ask what has been hardest",
+      "Reflect back what you hear",
+      "Acknowledge the courage it took to attend",
+      "Tolerate silence",
+    ],
+    avoidList: [
+      "Starting with a symptom checklist",
+      "Using clinical labels early",
+      "Pressing hard when she deflects",
+    ],
+    openingLine:
+      "I... I don't really know why I'm here. My GP kept insisting I come but I don't think there's much anyone can do. I'm probably just wasting your time.",
   },
   {
-    id: 'behavior-change', title: 'Behaviour Change',
-    description: 'Motivate a non-adherent diabetic patient who is resistant to changing his lifestyle.',
-    difficulty: 'medium', patientName: 'Robert Tan', patientAge: 58, icon: 'B',
-    avatarVariant: 'robert', availability: 'available', initialIntensity: 0.35, maxTurns: 10,
-    patientBackground: 'Robert is a retired contractor and widower. He has had type 2 diabetes for 8 years. He has been non-adherent with medication and diet. Multiple doctors have lectured him, making him increasingly defensive.',
-    clinicalContext: "This is Robert's quarterly review and his HbA1c is significantly elevated. Direct confrontation has failed before. Use motivational interviewing to explore his readiness and reasons for change.",
-    sessionGoal: 'Help Robert identify his own reasons to make a change and leave with one small, self-chosen concrete step forward.',
-    objectives: ['Ask what he knows and what concerns him', 'Explore ambivalence', 'Affirm something he is already doing well'],
-    doList: ['Ask what he knows about his diabetes', 'Explore what worries him', 'Affirm what he is managing', 'Invite one realistic next step'],
-    avoidList: ['Lecturing with statistics', 'Prescribing before exploring his goals', 'Making him feel like a bad patient'],
-    openingLine: "I know, I know, you're going to tell me my blood sugar is too high again. I've heard the speech before. I'm not a child, I understand the risks.",
+    id: "behavior-change",
+    title: "Behaviour Change",
+    description:
+      "Motivate a non-adherent diabetic patient who is resistant to changing his lifestyle.",
+    difficulty: "medium",
+    patientName: "Robert Tan",
+    patientAge: 58,
+    icon: "B",
+    avatarVariant: "robert",
+    availability: "available",
+    initialIntensity: 0.35,
+    maxTurns: 10,
+    patientBackground:
+      "Robert is a retired contractor and widower. He has had type 2 diabetes for 8 years. He has been non-adherent with medication and diet. Multiple doctors have lectured him, making him increasingly defensive.",
+    clinicalContext:
+      "This is Robert's quarterly review and his HbA1c is significantly elevated. Direct confrontation has failed before. Use motivational interviewing to explore his readiness and reasons for change.",
+    sessionGoal:
+      "Help Robert identify his own reasons to make a change and leave with one small, self-chosen concrete step forward.",
+    objectives: [
+      "Ask what he knows and what concerns him",
+      "Explore ambivalence",
+      "Affirm something he is already doing well",
+    ],
+    doList: [
+      "Ask what he knows about his diabetes",
+      "Explore what worries him",
+      "Affirm what he is managing",
+      "Invite one realistic next step",
+    ],
+    avoidList: [
+      "Lecturing with statistics",
+      "Prescribing before exploring his goals",
+      "Making him feel like a bad patient",
+    ],
+    openingLine:
+      "I know, I know, you're going to tell me my blood sugar is too high again. I've heard the speech before. I'm not a child, I understand the risks.",
   },
 ];
