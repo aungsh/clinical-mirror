@@ -63,11 +63,28 @@ export function isTavusConfigured(): boolean {
   return Boolean(getTavusApiKey());
 }
 
+/**
+ * Tavus ids are prefixed by resource type: faces are `r…`, PALs are `p…`.
+ * Pasting a PAL id into a *_FACE_ID slot is an easy mistake and Tavus does not
+ * reject it — it silently renders an unrelated face. Catch it here instead.
+ */
+function faceEnvValue(key: string): string | undefined {
+  const value = envValue(key);
+  if (!value) return undefined;
+  if (!value.startsWith('r')) {
+    console.warn(
+      `[tavus] Ignoring ${key}="${value}" — face ids start with "r" (PAL ids start with "p").`,
+    );
+    return undefined;
+  }
+  return value;
+}
+
 /** Face (visual likeness + voice) for a character. */
 export function resolveFaceId(variant: Variant): string {
   return (
-    envValue(`TAVUS_${variant.toUpperCase()}_FACE_ID`) ??
-    envValue('TAVUS_FACE_ID') ??
+    faceEnvValue(`TAVUS_${variant.toUpperCase()}_FACE_ID`) ??
+    faceEnvValue('TAVUS_FACE_ID') ??
     DEFAULT_FACE_ID
   );
 }
