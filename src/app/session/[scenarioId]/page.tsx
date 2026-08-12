@@ -4,15 +4,22 @@
 import { use, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mic, Square, Volume2, VolumeX, ArrowUp } from "lucide-react";
+import { Mic, MicOff, Square, Volume2, VolumeX, ArrowUp } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { scenarios } from "@/lib/scenario-catalog";
-import { Turn, EmotionType, AvatarMode, StockAvatarId } from "@/lib/types";
+import {
+  Turn,
+  EmotionType,
+  AvatarMode,
+  StockAvatarId,
+  TavusStatus,
+} from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 import {
   RealisticAvatar,
   STOCK_AVATAR_LABELS,
 } from "@/components/RealisticAvatar";
+import { TavusAvatar } from "@/components/TavusAvatar";
 import { VoiceOrb } from "@/components/VoiceOrb";
 import { speakEmotional, cancelSpeech, initVoices } from "@/lib/tts";
 
@@ -65,6 +72,25 @@ function AvatarSelectionScreen({
   const [selectedAvatarId, setSelectedAvatarId] =
     useState<StockAvatarId>("patient-a");
   const realisticUnavailable = !process.env.NEXT_PUBLIC_WAV2LIP_AVAILABLE;
+
+  // Live video patients depend on a server-side Tavus key, so availability is
+  // discovered at runtime rather than baked into the client bundle.
+  const [tavusAvailable, setTavusAvailable] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/tavus/status")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled) setTavusAvailable(Boolean(d?.available));
+      })
+      .catch(() => {
+        if (!cancelled) setTavusAvailable(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const tavusUnavailable = tavusAvailable === false;
 
   return (
     <div
@@ -150,7 +176,7 @@ function AvatarSelectionScreen({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "repeat(auto-fit, minmax(212px, 1fr))",
             gap: 16,
             marginBottom: 40,
           }}
@@ -267,7 +293,148 @@ function AvatarSelectionScreen({
               </div>
             )}
           </button>
+
+          {/* Live video patient (Tavus CVI) card */}
+          <button
+            id="btn-avatar-mode-tavus"
+            onClick={() => {
+              if (!tavusUnavailable) setSelectedMode("tavus");
+            }}
+            disabled={tavusUnavailable}
+            style={{
+              textAlign: "left",
+              padding: "24px",
+              borderRadius: "var(--r)",
+              background:
+                selectedMode === "tavus" ? "var(--accent-bg)" : "var(--surface)",
+              border: `1px solid ${selectedMode === "tavus" ? "var(--accent-bd)" : "var(--border)"}`,
+              cursor: tavusUnavailable ? "not-allowed" : "pointer",
+              fontFamily: "inherit",
+              transition: "all 0.15s",
+              opacity: tavusUnavailable ? 0.5 : 1,
+              position: "relative",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 15,
+                fontWeight: 600,
+                color: "var(--text-1)",
+                marginBottom: 6,
+              }}
+            >
+              Live Video Patient
+              {tavusAvailable === null && (
+                <span
+                  className="font-mono"
+                  style={{
+                    marginLeft: 8,
+                    fontSize: 9,
+                    color: "var(--text-3)",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  (CHECKING…)
+                </span>
+              )}
+              {tavusUnavailable && (
+                <span
+                  className="font-mono"
+                  style={{
+                    marginLeft: 8,
+                    fontSize: 9,
+                    color: "var(--text-3)",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  (NOT CONFIGURED)
+                </span>
+              )}
+              {tavusAvailable === true && selectedMode !== "tavus" && (
+                <span
+                  className="font-mono"
+                  style={{
+                    marginLeft: 8,
+                    fontSize: 9,
+                    color: "var(--accent-dim)",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  (RECOMMENDED)
+                </span>
+              )}
+            </div>
+            <div
+              style={{ fontSize: 13, color: "var(--text-2)", lineHeight: 1.5 }}
+            >
+              A real-time video call with a photorealistic patient. Talk out
+              loud and they answer immediately, with natural interruptions.
+            </div>
+            {selectedMode === "tavus" && (
+              <div
+                className="font-mono"
+                style={{
+                  marginTop: 10,
+                  fontSize: 9,
+                  color: "var(--accent)",
+                  letterSpacing: "0.12em",
+                }}
+              >
+                SELECTED ✓
+              </div>
+            )}
+          </button>
         </div>
+
+        {/* Live video briefing */}
+        {selectedMode === "tavus" && (
+          <div
+            style={{
+              marginBottom: 40,
+              padding: "16px 18px",
+              borderRadius: "var(--r)",
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <p
+              className="font-mono"
+              style={{
+                fontSize: 10,
+                color: "var(--text-3)",
+                letterSpacing: "0.14em",
+                marginBottom: 10,
+              }}
+            >
+              BEFORE YOU JOIN
+            </p>
+            <ul
+              style={{
+                margin: 0,
+                paddingLeft: 18,
+                fontSize: 13,
+                color: "var(--text-2)",
+                lineHeight: 1.7,
+              }}
+            >
+              <li>
+                Your browser will ask for microphone access. This is a spoken
+                consultation, so there is no text box.
+              </li>
+              <li>
+                Use headphones if you can — it stops the patient from hearing
+                their own voice back.
+              </li>
+              <li>
+                Your camera stays off unless you turn it on during the call.
+              </li>
+              <li>
+                The call is capped at 10 minutes and ends automatically when you
+                finish the session.
+              </li>
+            </ul>
+          </div>
+        )}
 
         {/* Stock avatar picker — only shown in realistic mode */}
         {selectedMode === "realistic" && (
@@ -841,6 +1008,13 @@ function ActiveSession({
   const [realisticLoading, setRealisticLoading] = useState(false);
   const [realisticFallback, setRealisticFallback] = useState(false);
 
+  // ── Live video patient (Tavus CVI) state ──────────────────────────────
+  const isTavus = avatarMode === "tavus";
+  const [tavusStatus, setTavusStatus] = useState<TavusStatus>("idle");
+  const [micLive, setMicLive] = useState(true);
+  const lastStudentTextRef = useRef("");
+  const lastUtteranceRef = useRef("");
+
   const recognitionRef = useRef<any>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -876,6 +1050,11 @@ function ActiveSession({
     let cancelled = false;
     let openingTimer: ReturnType<typeof setTimeout> | undefined;
 
+    // In live video mode Tavus speaks the opening line itself (custom_greeting)
+    // and reports it back as an utterance event, so we must not pre-seed it or
+    // speak it with browser TTS.
+    if (isTavus) return;
+
     const opening: Turn = {
       speaker: "patient",
       text: scenario.openingLine,
@@ -902,6 +1081,66 @@ function ActiveSession({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* ── Live video mode: Tavus utterance → transcript turn ──────────────── */
+
+  const handleTavusUtterance = useCallback(
+    ({ role, text }: { role: "student" | "patient"; text: string }) => {
+      const clean = text.trim();
+      if (!clean) return;
+
+      // Tavus can re-broadcast the same final utterance; ignore exact repeats.
+      const fingerprint = `${role}:${clean}`;
+      if (lastUtteranceRef.current === fingerprint) return;
+      lastUtteranceRef.current = fingerprint;
+
+      setTurns((prev) => [
+        ...prev,
+        { speaker: role, text: clean, timestamp: Date.now() },
+      ]);
+
+      if (role === "student") {
+        lastStudentTextRef.current = clean;
+        return;
+      }
+
+      setLastPatientText(clean);
+      setPatientTurnCount((c) => c + 1);
+
+      // Recover the emotion signal that /api/chat would normally return, so the
+      // emotion readout and the intensity trend in the feedback report still work.
+      fetch("/api/emotion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scenarioId: scenario.id,
+          patientText: clean,
+          studentText: lastStudentTextRef.current,
+        }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (!d?.emotion) return;
+          const emo = d.emotion as EmotionType;
+          const inten = typeof d.intensity === "number" ? d.intensity : 0.5;
+          setEmotion(emo);
+          setIntensity(inten);
+          // Backfill the turn we just added so feedback sees the signal.
+          setTurns((prev) => {
+            const next = [...prev];
+            for (let i = next.length - 1; i >= 0; i -= 1) {
+              if (next[i].speaker === "patient" && next[i].text === clean) {
+                next[i] = { ...next[i], emotion: emo, intensity: inten };
+                break;
+              }
+            }
+            return next;
+          });
+        })
+        .catch(() => undefined);
+    },
+    [scenario.id],
+  );
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -1032,9 +1271,14 @@ function ActiveSession({
   const handleEnd = () => {
     const sc = turns.filter((t) => t.speaker === "student").length;
     if (sc < 2) {
-      alert("Please have at least a couple of exchanges first.");
+      setRequestError(
+        isTavus
+          ? "Feedback needs at least two of your own spoken turns in the transcript. Check the Transcript panel — if your replies are missing, your microphone may not be reaching the patient."
+          : "Please have at least a couple of exchanges first.",
+      );
       return;
     }
+    setRequestError("");
     cancelSpeech();
     recognitionRef.current?.stop();
     onEnd(turns);
@@ -1042,6 +1286,16 @@ function ActiveSession({
 
   const ec = EMOTION_COLORS[emotion];
   const studentCount = turns.filter((t) => t.speaker === "student").length;
+  const firstName = scenario.patientName.split(" ")[0];
+
+  // In live video mode the caption bubble doubles as call guidance until the
+  // patient has actually said something.
+  const bubbleText =
+    isTavus && patientTurnCount === 0
+      ? tavusStatus === "live"
+        ? `${firstName} can hear you. Speak when you are ready.`
+        : `Start the video call to meet ${firstName}.`
+      : lastPatientText;
 
   // Progress toward goal
   const initI = scenario.initialIntensity;
@@ -1268,14 +1522,28 @@ function ActiveSession({
                   margin: 0,
                 }}
               >
-                {lastPatientText}
+                {bubbleText}
               </p>
             )}
           </div>
 
-          {/* Avatar — Realistic or Mii */}
-          <div className="animate-breathe avatar-wrapper">
-            {avatarMode === "realistic" && !realisticFallback ? (
+          {/* Avatar — Live video (Tavus), Realistic clip, or Mii */}
+          <div
+            className={isTavus ? "avatar-wrapper" : "animate-breathe avatar-wrapper"}
+          >
+            {isTavus ? (
+              <TavusAvatar
+                scenarioId={scenario.id}
+                patientName={scenario.patientName}
+                size={272}
+                emotion={emotion}
+                micEnabled={micLive}
+                patientMuted={isMuted}
+                onStatusChange={setTavusStatus}
+                onUtterance={handleTavusUtterance}
+                onSpeakingChange={setIsSpeaking}
+              />
+            ) : avatarMode === "realistic" && !realisticFallback ? (
               <RealisticAvatar
                 videoUrl={realisticVideoUrl}
                 isLoading={realisticLoading}
@@ -1298,7 +1566,14 @@ function ActiveSession({
           </div>
 
           {/* Emotion label - simple, no glow */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              visibility: isTavus && patientTurnCount === 0 ? "hidden" : "visible",
+            }}
+          >
             <span
               className="font-mono"
               style={{ fontSize: 10, color: ec, letterSpacing: "0.1em" }}
@@ -1322,14 +1597,16 @@ function ActiveSession({
             </span>
           </div>
 
-          {/* Orb */}
-          <VoiceOrb
-            isSpeaking={isSpeaking}
-            isListening={isMicActive}
-            isIdle={!isSpeaking && !isMicActive}
-            color={ec}
-            size={90}
-          />
+          {/* Orb — the live video frame is its own presence indicator */}
+          {!isTavus && (
+            <VoiceOrb
+              isSpeaking={isSpeaking}
+              isListening={isMicActive}
+              isIdle={!isSpeaking && !isMicActive}
+              color={ec}
+              size={90}
+            />
+          )}
 
           {nearEnd && (
             <p
@@ -1648,6 +1925,95 @@ function ActiveSession({
             {requestError}
           </div>
         )}
+        {isTavus ? (
+          /* ── Live video call controls ── */
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 480,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 14,
+            }}
+          >
+            <button
+              id="btn-tavus-mic"
+              onClick={() => setMicLive((m) => !m)}
+              disabled={tavusStatus !== "live"}
+              aria-pressed={!micLive}
+              aria-label={
+                micLive ? "Mute your microphone" : "Unmute your microphone"
+              }
+              style={{
+                width: 78,
+                height: 78,
+                borderRadius: "50%",
+                background: micLive ? "var(--accent)" : "var(--danger-bg)",
+                color: micLive ? "#ffffff" : "var(--danger)",
+                border: micLive ? "none" : "2px solid var(--danger)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: tavusStatus === "live" ? "pointer" : "not-allowed",
+                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                boxShadow: micLive
+                  ? "0 8px 24px rgba(158, 178, 153, 0.4)"
+                  : "0 0 24px rgba(244, 151, 151, 0.3)",
+                opacity: tavusStatus === "live" ? 1 : 0.45,
+              }}
+            >
+              {micLive ? <MicOff size={30} /> : <Mic size={30} />}
+            </button>
+            <div
+              style={{
+                fontSize: 12,
+                color: "var(--text-3)",
+                fontWeight: 500,
+                textAlign: "center",
+              }}
+            >
+              {tavusStatus !== "live"
+                ? "Start the call above to begin speaking"
+                : micLive
+                  ? `Just talk — ${firstName} is listening. Tap to mute.`
+                  : `Muted. ${firstName} cannot hear you.`}
+            </div>
+            <div
+              className="font-mono"
+              style={{
+                fontSize: 9,
+                color: "var(--text-3)",
+                letterSpacing: "0.1em",
+                textAlign: "center",
+              }}
+            >
+              LIVE CONVERSATION · NO TYPING NEEDED
+            </div>
+
+            {/* Feedback needs the student's side of the transcript. Surface it
+                early if only the patient's turns are being captured. */}
+            {patientTurnCount >= 2 && studentCount === 0 && (
+              <div
+                role="status"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: "var(--r)",
+                  background: "rgba(250, 180, 117, 0.15)",
+                  border: "1px solid var(--warn)",
+                  color: "var(--text-2)",
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                  textAlign: "center",
+                }}
+              >
+                Your replies are not appearing in the transcript yet. Check the
+                Transcript panel — feedback needs your own turns to be captured.
+              </div>
+            )}
+          </div>
+        ) : (
         <Tabs
           className="tabs-container"
           defaultValue="voice"
@@ -1790,6 +2156,7 @@ function ActiveSession({
             <TabsTrigger value="text">Text</TabsTrigger>
           </TabsList>
         </Tabs>
+        )}
       </div>
 
       <style>{`

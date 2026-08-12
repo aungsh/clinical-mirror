@@ -1,6 +1,25 @@
-export type AvatarMode = 'mii' | 'realistic';
+export type AvatarMode = 'mii' | 'realistic' | 'tavus';
 
 export type StockAvatarId = 'patient-a' | 'patient-b' | 'patient-c';
+
+/** Response from POST /api/tavus/conversation */
+export interface TavusConversation {
+  conversationId: string;
+  conversationUrl: string;
+  /** Only present when the Tavus room was created with require_auth. */
+  meetingToken?: string;
+  /** Display name of the Tavus face rendering this patient. */
+  faceLabel: string;
+}
+
+export type TavusStatus =
+  | 'idle'        // not started
+  | 'creating'    // asking our API for a conversation
+  | 'joining'     // joining the WebRTC room
+  | 'waiting'     // joined, waiting for the replica to appear
+  | 'live'        // replica video is streaming
+  | 'ended'       // conversation finished
+  | 'error';      // unrecoverable failure
 
 export type EmotionType =
   | 'neutral'
