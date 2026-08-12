@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { scenarios } from "@/lib/scenario-catalog";
 import { Turn, EmotionType, AvatarMode, StockAvatarId } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
-import { StaticPatientAvatar } from "@/components/StaticPatientAvatar";
 import {
   RealisticAvatar,
   STOCK_AVATAR_LABELS,
@@ -1274,9 +1273,7 @@ function ActiveSession({
             )}
           </div>
 
-          {/* Avatar — Realistic | Static Portrait | Mii (SVG) */}
-          {/* NEXT_PUBLIC_STATIC_AVATAR=true enables the static portrait avatar  */}
-          {/* Set it to false (or remove it) to fall back to the Mii SVG avatar */}
+          {/* Avatar — Realistic or Mii */}
           <div className="animate-breathe avatar-wrapper">
             {avatarMode === "realistic" && !realisticFallback ? (
               <RealisticAvatar
@@ -1287,14 +1284,6 @@ function ActiveSession({
                 emotion={emotion}
                 size={280}
                 onPlaybackEnd={() => setIsSpeaking(false)}
-              />
-            ) : process.env.NEXT_PUBLIC_STATIC_AVATAR === "true" ? (
-              <StaticPatientAvatar
-                patientId={scenario.avatarVariant}
-                emotion={emotion}
-                intensity={intensity}
-                isSpeaking={isSpeaking}
-                size={280}
               />
             ) : (
               <Avatar
