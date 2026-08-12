@@ -1529,13 +1529,17 @@ function ActiveSession({
 
           {/* Avatar — Live video (Tavus), Realistic clip, or Mii */}
           <div
-            className={isTavus ? "avatar-wrapper" : "animate-breathe avatar-wrapper"}
+            className={isTavus ? undefined : "animate-breathe avatar-wrapper"}
+            style={
+              isTavus
+                ? { width: "100%", display: "flex", justifyContent: "center" }
+                : undefined
+            }
           >
             {isTavus ? (
               <TavusAvatar
                 scenarioId={scenario.id}
                 patientName={scenario.patientName}
-                size={272}
                 emotion={emotion}
                 micEnabled={micLive}
                 patientMuted={isMuted}
@@ -1898,7 +1902,8 @@ function ActiveSession({
         className="input-area"
         style={{
           flexShrink: 0,
-          padding: "24px",
+          // Live video mode gives its vertical space to the video instead.
+          padding: isTavus ? "18px 24px" : "24px",
           borderTop: "1px solid var(--border)",
           background: "var(--surface)",
           display: "flex",
@@ -1946,8 +1951,8 @@ function ActiveSession({
                 micLive ? "Mute your microphone" : "Unmute your microphone"
               }
               style={{
-                width: 78,
-                height: 78,
+                width: 72,
+                height: 72,
                 borderRadius: "50%",
                 background: micLive ? "var(--accent)" : "var(--danger-bg)",
                 color: micLive ? "#ffffff" : "var(--danger)",

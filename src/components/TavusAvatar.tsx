@@ -37,7 +37,10 @@ import type { EmotionType, TavusConversation, TavusStatus } from '@/lib/types';
 export interface TavusAvatarProps {
   scenarioId: string;
   patientName: string;
-  /** Frame width in px. Height is derived as a 4:5 portrait. */
+  /**
+   * Optional fixed frame width in px. When omitted the frame is a responsive
+   * 4:5 portrait that grows to fill the available stage height.
+   */
   size?: number;
   /** Current patient emotion — drives the ambient glow only. */
   emotion?: EmotionType;
@@ -98,7 +101,7 @@ function normaliseRole(role: string | undefined): 'student' | 'patient' | null {
 export function TavusAvatar({
   scenarioId,
   patientName,
-  size = 300,
+  size,
   emotion = 'neutral',
   micEnabled = true,
   patientMuted = false,
@@ -116,6 +119,8 @@ export function TavusAvatar({
   const [cameraOn, setCameraOn] = useState(cameraEnabled);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  /** Second, heavily blurred copy of the same stream — the ambient halo. */
+  const haloRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const callRef = useRef<DailyCall | null>(null);
   const conversationIdRef = useRef<string | null>(null);
@@ -130,8 +135,28 @@ export function TavusAvatar({
   }, [onStatusChange, onUtterance, onSpeakingChange, onConversationReady, onError]);
 
   const glowColor = GLOW_COLORS[emotion];
-  const frameW = size;
-  const frameH = Math.round(size * 1.18);
+
+  /**
+   * Tavus streams 16:9 landscape, so the frame is 16:9 — a portrait frame would
+   * crop the sides of the stream away.
+   *
+   * Height is still the constrained axis inside the session stage, so the frame
+   * is driven from viewport height and the aspect ratio derives the width, with
+   * a max-width guard for wide-but-short windows.
+   */
+  const frameSize: React.CSSProperties = size
+    ? { width: size, height: Math.round((size * 9) / 16) }
+    : {
+        /*
+         * Driven from width with a definite aspect-ratio so the box can never
+         * distort or overflow its column. The vh term is the height budget:
+         * 380px is everything else stacked in the session stage (header,
+         * caption, emotion readout, call controls), converted to a width via
+         * 16/9 so the derived height always fits what is left.
+         */
+        width: 'max(280px, min(100%, calc((100dvh - 380px) * 16 / 9), 1040px))',
+        aspectRatio: '16 / 9',
+      };
 
   const updateStatus = useCallback((next: TavusStatus) => {
     setStatus(next);
@@ -160,10 +185,18 @@ export function TavusAvatar({
 
     if (videoTrack && videoRef.current && videoTrackIdRef.current !== videoTrack.id) {
       videoTrackIdRef.current = videoTrack.id;
+
+      // The same track feeds the sharp frame and the blurred ambient halo.
       videoRef.current.srcObject = new MediaStream([videoTrack]);
       void videoRef.current.play().catch(() => {
         /* muted video autoplay is allowed; ignore transient failures */
       });
+
+      if (haloRef.current) {
+        haloRef.current.srcObject = new MediaStream([videoTrack]);
+        void haloRef.current.play().catch(() => undefined);
+      }
+
       updateStatus('live');
     }
 
@@ -350,23 +383,98 @@ export function TavusAvatar({
   const showVideo = status === 'live';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-      <div
-        style={{
-          position: 'relative',
-          width: frameW,
-          height: frameH,
-          borderRadius: 20,
-          overflow: 'hidden',
-          background: '#15171a',
-          border: '1px solid var(--border)',
-          boxShadow: showVideo
-            ? `0 18px 48px rgba(20,22,26,0.22), 0 0 0 1px rgba(255,255,255,0.04) inset, 0 0 ${isPatientSpeaking ? 34 : 0}px ${glowColor}66`
-            : '0 10px 30px rgba(20,22,26,0.12)',
-          transition: 'box-shadow 0.5s ease',
-          flexShrink: 0,
-        }}
-      >
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 12,
+        width: '100%',
+      }}
+    >
+      {/* Positioning context for the ambient halo, which bleeds around the frame */}
+      <div style={{ position: 'relative', ...frameSize, flexShrink: 0 }}>
+        {/* ── Ambient halo (YouTube-style) ──
+            A second copy of the live stream, scaled up and heavily blurred, so
+            the colour spilling around the frame is genuinely derived from the
+            video rather than being a static decoration. */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 0,
+            pointerEvents: 'none',
+            opacity: showVideo ? 1 : 0,
+            transition: 'opacity 1.1s ease',
+          }}
+        >
+          {/*
+           * Two things make this work:
+           *
+           * 1. The blur filter sits on the video itself and nothing above it
+           *    clips — with overflow:hidden in between, the blur is cut off at
+           *    the frame edge and the halo disappears entirely.
+           * 2. mix-blend-mode: multiply. The page background is near-white, so
+           *    a screen or normal blend has no light to add and just greys the
+           *    page. Multiplying a saturated blur produces a coloured ambient
+           *    spill that grounds the video on a light theme.
+           */}
+          <video
+            ref={haloRef}
+            autoPlay
+            playsInline
+            muted
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              borderRadius: 32,
+              filter: 'blur(52px) saturate(300%) contrast(112%)',
+              mixBlendMode: 'multiply',
+              opacity: 0.5,
+              transform: isPatientSpeaking ? 'scale(1.13)' : 'scale(1.07)',
+              transition: 'transform 1.3s cubic-bezier(0.16,1,0.3,1)',
+              willChange: 'transform',
+            }}
+          />
+        </div>
+
+        {/* Emotion-tinted bloom: always faintly present while live, blooming
+            outward when the patient speaks. */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: '-20%',
+            zIndex: 0,
+            pointerEvents: 'none',
+            borderRadius: '50%',
+            // Normal blend, unlike the video halo above: this is a pure
+            // saturated pastel, which does read against the cream background.
+            background: `radial-gradient(ellipse at 50% 50%, ${glowColor}66 0%, ${glowColor}2b 45%, transparent 72%)`,
+            opacity: showVideo ? (isPatientSpeaking ? 0.85 : 0.3) : 0,
+            transform: isPatientSpeaking ? 'scale(1.12)' : 'scale(1.02)',
+            transition: 'opacity 0.7s ease, transform 1.3s cubic-bezier(0.16,1,0.3,1)',
+          }}
+        />
+
+        {/* ── The video card ── */}
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            width: '100%',
+            height: '100%',
+            borderRadius: 24,
+            overflow: 'hidden',
+            background: '#15171a',
+            boxShadow: showVideo
+              ? '0 28px 60px -22px rgba(45,43,42,0.38), 0 0 0 1px rgba(255,255,255,0.07) inset, 0 1px 0 0 rgba(255,255,255,0.13) inset'
+              : '0 20px 46px -20px rgba(45,43,42,0.3), 0 0 0 1px rgba(0,0,0,0.05)',
+            transition: 'box-shadow 0.5s ease',
+          }}
+        >
         {/* Patient video */}
         <video
           ref={videoRef}
@@ -395,7 +503,7 @@ export function TavusAvatar({
               inset: 0,
               pointerEvents: 'none',
               background:
-                'radial-gradient(120% 90% at 50% 30%, transparent 55%, rgba(10,11,13,0.34) 100%), linear-gradient(to top, rgba(10,11,13,0.55) 0%, transparent 32%)',
+                'radial-gradient(120% 90% at 50% 28%, transparent 52%, rgba(10,11,13,0.38) 100%), linear-gradient(to top, rgba(10,11,13,0.6) 0%, transparent 30%)',
             }}
           />
         )}
@@ -405,15 +513,16 @@ export function TavusAvatar({
           <div
             style={{
               position: 'absolute',
-              top: 12,
-              left: 12,
+              top: 16,
+              left: 16,
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
-              padding: '4px 9px',
+              gap: 7,
+              padding: '5px 11px',
               borderRadius: 999,
-              background: 'rgba(10,11,13,0.55)',
-              backdropFilter: 'blur(8px)',
+              background: 'rgba(10,11,13,0.5)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(10px)',
             }}
           >
             <span
@@ -434,16 +543,93 @@ export function TavusAvatar({
           </div>
         )}
 
+        {/* Mic + camera status, overlaid rather than placed below the frame so
+            the video keeps the vertical space. */}
+        {showVideo && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '5px 10px',
+              borderRadius: 999,
+              background: 'rgba(10,11,13,0.5)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(10px)',
+            }}
+          >
+            <span
+              title={micEnabled ? 'Your microphone is live' : 'Your microphone is muted'}
+              style={{
+                display: 'flex',
+                color: micEnabled ? 'rgba(255,255,255,0.85)' : '#f4a0a0',
+              }}
+            >
+              {micEnabled ? <Mic size={13} /> : <MicOff size={13} />}
+            </span>
+            <span
+              aria-hidden
+              style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.16)' }}
+            />
+            <button
+              onClick={() => setCameraOn((c) => !c)}
+              aria-label={cameraOn ? 'Turn your camera off' : 'Turn your camera on'}
+              title={
+                cameraOn
+                  ? 'Turn your camera off'
+                  : 'Turn your camera on so the patient can read your body language'
+              }
+              style={{
+                display: 'flex',
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                color: cameraOn ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.42)',
+              }}
+            >
+              {cameraOn ? <Video size={13} /> : <VideoOff size={13} />}
+            </button>
+          </div>
+        )}
+
         {/* Name plate */}
         {showVideo && (
-          <div style={{ position: 'absolute', bottom: 12, left: 14, right: 14 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.95)' }}>
+          <div style={{ position: 'absolute', bottom: 18, left: 20, right: 20 }}>
+            <div
+              style={{
+                fontSize: 16,
+                fontWeight: 600,
+                letterSpacing: '-0.01em',
+                color: 'rgba(255,255,255,0.96)',
+              }}
+            >
               {patientName}
             </div>
             <div
               className="font-mono"
-              style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.1em' }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 9,
+                color: 'rgba(255,255,255,0.62)',
+                letterSpacing: '0.12em',
+                marginTop: 3,
+              }}
             >
+              <span
+                style={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: '50%',
+                  background: isPatientSpeaking ? glowColor : 'rgba(255,255,255,0.4)',
+                  transition: 'background 0.4s ease',
+                }}
+              />
               {isPatientSpeaking ? 'SPEAKING' : 'LISTENING'}
             </div>
           </div>
@@ -454,23 +640,32 @@ export function TavusAvatar({
           <div style={overlayStyle}>
             <div
               style={{
-                width: 64,
-                height: 64,
+                width: 56,
+                height: 56,
                 borderRadius: '50%',
                 background: 'rgba(255,255,255,0.07)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 border: '1px solid rgba(255,255,255,0.14)',
+                flexShrink: 0,
               }}
             >
-              <Video size={26} color="rgba(255,255,255,0.8)" />
+              <Video size={24} color="rgba(255,255,255,0.8)" />
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.94)' }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.94)' }}>
                 {patientName} is ready
               </div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>
+              <div
+                style={{
+                  fontSize: 12.5,
+                  color: 'rgba(255,255,255,0.6)',
+                  marginTop: 5,
+                  lineHeight: 1.5,
+                  maxWidth: 340,
+                }}
+              >
                 Speak naturally. They will hear you and reply in real time.
               </div>
             </div>
@@ -478,7 +673,7 @@ export function TavusAvatar({
               id="btn-tavus-start"
               onClick={() => void startCall()}
               style={{
-                padding: '11px 22px',
+                padding: '10px 22px',
                 borderRadius: 'var(--r)',
                 background: 'var(--accent)',
                 color: '#14161a',
@@ -557,6 +752,7 @@ export function TavusAvatar({
             </button>
           </div>
         )}
+        </div>
       </div>
 
       {/* Audio unblock prompt — browsers can refuse programmatic playback */}
@@ -569,6 +765,8 @@ export function TavusAvatar({
               .catch(() => undefined);
           }}
           style={{
+            position: 'relative',
+            zIndex: 1,
             display: 'flex',
             alignItems: 'center',
             gap: 7,
@@ -588,50 +786,6 @@ export function TavusAvatar({
         </button>
       )}
 
-      {/* Call footer: mic + camera state */}
-      {showVideo && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span
-            className="font-mono"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 9,
-              letterSpacing: '0.1em',
-              color: micEnabled ? 'var(--accent-dim)' : 'var(--danger)',
-            }}
-          >
-            {micEnabled ? <Mic size={12} /> : <MicOff size={12} />}
-            {micEnabled ? 'MIC LIVE' : 'MIC MUTED'}
-          </span>
-          <span style={{ color: 'var(--text-3)', fontSize: 9 }}>·</span>
-          <button
-            onClick={() => setCameraOn((c) => !c)}
-            title={
-              cameraOn
-                ? 'Turn your camera off'
-                : 'Turn your camera on so the patient can read your body language'
-            }
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              fontFamily: 'var(--font-mono, ui-monospace, monospace)',
-              fontSize: 9,
-              letterSpacing: '0.1em',
-              color: cameraOn ? 'var(--accent-dim)' : 'var(--text-3)',
-            }}
-          >
-            {cameraOn ? <Video size={12} /> : <VideoOff size={12} />}
-            {cameraOn ? 'CAMERA ON' : 'CAMERA OFF'}
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -643,7 +797,8 @@ const overlayStyle: React.CSSProperties = {
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  gap: 14,
-  padding: 24,
-  background: 'linear-gradient(180deg, #1b1e22 0%, #14161a 100%)',
+  gap: 12,
+  padding: 20,
+  overflow: 'hidden',
+  background: 'linear-gradient(180deg, #1e2126 0%, #14161a 100%)',
 };
