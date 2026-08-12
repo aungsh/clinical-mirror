@@ -1,5 +1,5 @@
-import 'server-only';
-import { Scenario } from './types';
+import "server-only";
+import { Scenario } from "./types";
 
 export interface ServerScenario extends Scenario {
   systemPrompt: string;
@@ -7,44 +7,45 @@ export interface ServerScenario extends Scenario {
 
 export const scenarios: ServerScenario[] = [
   {
-    id: 'bad-news',
-    title: 'Breaking Bad News',
-    description: 'Deliver a serious cancer diagnosis to a patient who is anxious and unprepared.',
-    difficulty: 'hard',
-    patientName: 'Margaret Chen',
+    id: "bad-news",
+    title: "Breaking Bad News",
+    description:
+      "Deliver a serious cancer diagnosis to a patient who is anxious and unprepared.",
+    difficulty: "hard",
+    patientName: "Margaret Chen",
     patientAge: 52,
-    icon: 'C',
-    avatarVariant: 'margaret',
-    availability: 'available',
+    icon: "C",
+    avatarVariant: "margaret",
+    availability: "available",
     initialIntensity: 0.75,
     maxTurns: 10,
 
     patientBackground:
-      'Margaret is a primary school teacher, married with two adult children. She has been healthy most of her life. She noticed a lump three weeks ago and came in for tests. This is her first serious health scare and she has been barely sleeping.',
+      "Margaret is a primary school teacher, married with two adult children. She has been healthy most of her life. She noticed a lump three weeks ago and came in for tests. This is her first serious health scare and she has been barely sleeping.",
 
     clinicalContext:
-      'Margaret has been called back for results following a biopsy. She has stage 3 breast cancer. She does not yet know her diagnosis. Your role is to deliver this news compassionately and ensure she leaves feeling supported, not alone.',
+      "Margaret has been called back for results following a biopsy. She has stage 3 breast cancer. She does not yet know her diagnosis. Your role is to deliver this news compassionately and ensure she leaves feeling supported, not alone.",
 
     sessionGoal:
-      'Deliver the diagnosis with compassion, give her space to react emotionally, and ensure she feels supported before any clinical next steps are discussed.',
+      "Deliver the diagnosis with compassion, give her space to react emotionally, and ensure she feels supported before any clinical next steps are discussed.",
 
     objectives: [
-      'Find out what Margaret already knows or suspects before you speak',
-      'Deliver the news gently in plain language (no jargon)',
-      'Pause after delivering the diagnosis and acknowledge her emotional response',
+      "Find out what Margaret already knows or suspects before you speak",
+      "Deliver the news gently in plain language (no jargon)",
+      "Pause after delivering the diagnosis and acknowledge her emotional response",
     ],
 
     doList: [
       'Start with "What have you been told so far?"',
       'Give the news simply: "The results show it is cancer"',
-      'Stay silent after, let her react',
+      "Stay silent after, let her react",
       'Say "You are not going through this alone"',
     ],
 
     avoidList: [
       'Medical jargon (e.g. "adenocarcinoma", "staging protocol")',
-      'Minimising: "It\'s very treatable, don\'t worry"',
-      'Rushing into treatment plans before she has processed the news',
+      "Minimising: \"It's very treatable, don't worry\"",
+      "Rushing into treatment plans before she has processed the news",
     ],
 
     openingLine:
@@ -73,43 +74,44 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
   },
 
   {
-    id: 'angry-family',
-    title: 'Angry Family Member',
-    description: 'De-escalate a frustrated son who feels his hospitalised father has been neglected.',
-    difficulty: 'hard',
-    patientName: 'James Morrison',
+    id: "angry-family",
+    title: "Angry Family Member",
+    description:
+      "De-escalate a frustrated son who feels his hospitalised father has been neglected.",
+    difficulty: "hard",
+    patientName: "James Morrison",
     patientAge: 45,
-    icon: 'H',
-    avatarVariant: 'james',
-    availability: 'available',
+    icon: "H",
+    avatarVariant: "james",
+    availability: "available",
     initialIntensity: 0.85,
     maxTurns: 10,
 
     patientBackground:
-      'James is a senior manager who flew in from overseas when his father Thomas (78) was admitted. He has been at the hospital for 3 hours with no updates. He is the primary family decision-maker and is used to being in control.',
+      "James is a senior manager who flew in from overseas when his father Thomas (78) was admitted. He has been at the hospital for 3 hours with no updates. He is the primary family decision-maker and is used to being in control.",
 
     clinicalContext:
-      'Thomas is stable and receiving appropriate care. The problem is a communication failure. James received no updates for 12 hours. His anger is justified frustration, not unreasonableness. De-escalate by acknowledging him, not defending the system.',
+      "Thomas is stable and receiving appropriate care. The problem is a communication failure. James received no updates for 12 hours. His anger is justified frustration, not unreasonableness. De-escalate by acknowledging him, not defending the system.",
 
     sessionGoal:
-      'De-escalate James\'s anger, acknowledge his frustration genuinely, and rebuild his trust by giving him a clear update on his father.',
+      "De-escalate James's anger, acknowledge his frustration genuinely, and rebuild his trust by giving him a clear update on his father.",
 
     objectives: [
-      'Let him vent fully before responding, do not interrupt',
-      'Explicitly acknowledge his frustration and the wait',
-      'Give a concrete action step, not a vague promise',
+      "Let him vent fully before responding, do not interrupt",
+      "Explicitly acknowledge his frustration and the wait",
+      "Give a concrete action step, not a vague promise",
     ],
 
     doList: [
-      'Say his name and make eye contact',
+      "Say his name and make eye contact",
       '"You have every right to be frustrated. This wait is not acceptable"',
       'Offer a specific update: "Let me find out exactly where things are right now"',
-      'Ask what he needs most right now',
+      "Ask what he needs most right now",
     ],
 
     avoidList: [
       'Saying "Calm down" or "I understand how you feel" too quickly',
-      'Defending the system or making excuses',
+      "Defending the system or making excuses",
       'Vague answers: "We\'ll look into it" without follow-through',
     ],
 
@@ -139,45 +141,45 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
   },
 
   {
-    id: 'mental-health',
-    title: 'Mental Health Crisis',
-    description: 'Support a young patient experiencing severe anxiety and depression who is reluctant to engage.',
-    difficulty: 'medium',
-    patientName: 'Emma Sullivan',
+    id: "mental-health",
+    title: "Mental Health Crisis",
+    description:
+      "Support a young patient experiencing severe anxiety and depression who is reluctant to engage.",
+    difficulty: "medium",
+    patientName: "Emma Sullivan",
     patientAge: 28,
-    icon: 'M',
-    avatarVariant: 'emma',
-    availability: 'faculty-review',
-    safetyNote: 'Held for faculty review because crisis escalation and safeguarding paths must be validated before learner use.',
-    initialIntensity: 0.70,
+    icon: "M",
+    avatarVariant: "emma",
+    availability: "available",
+    initialIntensity: 0.7,
     maxTurns: 10,
 
     patientBackground:
-      'Emma is a freelance graphic designer who lives alone. She has been struggling since a relationship breakdown six months ago. Her GP referred her after she missed two previous appointments. She has never spoken openly about her mental health before.',
+      "Emma is a freelance graphic designer who lives alone. She has been struggling since a relationship breakdown six months ago. Her GP referred her after she missed two previous appointments. She has never spoken openly about her mental health before.",
 
     clinicalContext:
-      'Emma is here, that took courage. Your priority is not to diagnose or prescribe, but to keep her engaged and help her feel safe enough to open up. She will retreat quickly if she feels processed or judged.',
+      "Emma is here, that took courage. Your priority is not to diagnose or prescribe, but to keep her engaged and help her feel safe enough to open up. She will retreat quickly if she feels processed or judged.",
 
     sessionGoal:
-      'Help Emma feel genuinely heard and safe enough to begin sharing what she is experiencing.',
+      "Help Emma feel genuinely heard and safe enough to begin sharing what she is experiencing.",
 
     objectives: [
-      'Use open, curiosity-led questions rather than a symptom checklist',
-      'Reflect and validate her experience without rushing to solutions',
-      'Create enough safety that she opens up more than she intended to',
+      "Use open, curiosity-led questions rather than a symptom checklist",
+      "Reflect and validate her experience without rushing to solutions",
+      "Create enough safety that she opens up more than she intended to",
     ],
 
     doList: [
       '"It sounds like things have been really hard. What\'s been the hardest part?"',
       'Reflect back: "So it sounds like you feel like a burden..."',
-      'Acknowledge the courage it took to come today',
-      'Tolerate silence — let her find her words',
+      "Acknowledge the courage it took to come today",
+      "Tolerate silence — let her find her words",
     ],
 
     avoidList: [
-      'Running through a depression/anxiety questionnaire immediately',
+      "Running through a depression/anxiety questionnaire immediately",
       'Using clinical labels early (e.g. "anxiety disorder", "depression")',
-      'Pressing hard when she deflects or changes the subject',
+      "Pressing hard when she deflects or changes the subject",
     ],
 
     openingLine:
@@ -206,31 +208,32 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
   },
 
   {
-    id: 'behavior-change',
-    title: 'Behaviour Change',
-    description: 'Motivate a non-adherent diabetic patient who is resistant to changing his lifestyle.',
-    difficulty: 'medium',
-    patientName: 'Robert Tan',
+    id: "behavior-change",
+    title: "Behaviour Change",
+    description:
+      "Motivate a non-adherent diabetic patient who is resistant to changing his lifestyle.",
+    difficulty: "medium",
+    patientName: "Robert Tan",
     patientAge: 58,
-    icon: 'B',
-    avatarVariant: 'robert',
-    availability: 'available',
+    icon: "B",
+    avatarVariant: "robert",
+    availability: "available",
     initialIntensity: 0.35,
     maxTurns: 10,
 
     patientBackground:
-      'Robert is a retired contractor and widower. He has had type 2 diabetes for 8 years. He has been non-adherent with medication and diet. Multiple doctors have lectured him, making him increasingly defensive.',
+      "Robert is a retired contractor and widower. He has had type 2 diabetes for 8 years. He has been non-adherent with medication and diet. Multiple doctors have lectured him, making him increasingly defensive.",
 
     clinicalContext:
-      'This is Robert\'s quarterly review, his HbA1c is significantly elevated. Direct confrontation has failed before. This calls for Motivational Interviewing: explore his own readiness and reasons for change, rather than prescribing solutions.',
+      "This is Robert's quarterly review, his HbA1c is significantly elevated. Direct confrontation has failed before. This calls for Motivational Interviewing: explore his own readiness and reasons for change, rather than prescribing solutions.",
 
     sessionGoal:
-      'Help Robert identify his own reasons to make a change and leave with one small, self-chosen concrete step forward.',
+      "Help Robert identify his own reasons to make a change and leave with one small, self-chosen concrete step forward.",
 
     objectives: [
-      'Ask what he already knows and what concerns him, don\'t lecture',
+      "Ask what he already knows and what concerns him, don't lecture",
       'Explore ambivalence: "What would change for you if things stayed the same?"',
-      'Affirm something he is already doing well',
+      "Affirm something he is already doing well",
     ],
 
     doList: [
@@ -241,8 +244,8 @@ RESPONSE FORMAT: You must always respond with valid JSON only, no other text:
     ],
 
     avoidList: [
-      'Lecturing or presenting statistics without being asked',
-      'Telling him what he should do before exploring what he wants',
+      "Lecturing or presenting statistics without being asked",
+      "Telling him what he should do before exploring what he wants",
       'Making him feel like a "bad patient"',
     ],
 

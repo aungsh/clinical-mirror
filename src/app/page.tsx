@@ -196,9 +196,6 @@ export default function HomePage() {
                       ,
                     </span>
                     {scenario.description}
-                    {scenario.availability !== "available" && (
-                      <span style={{ marginLeft: 8, color: "var(--warn)", fontWeight: 600 }}>Faculty review required</span>
-                    )}
                   </div>
                 </div>
 
@@ -217,7 +214,7 @@ export default function HomePage() {
                     background: `${diff.color}08`,
                   }}
                 >
-                  {scenario.availability === "available" ? diff.label.toUpperCase() : "ON HOLD"}
+                  {diff.label.toUpperCase()}
                 </span>
 
                 {/* (Arrow removed to reduce AI tell) */}
