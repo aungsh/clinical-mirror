@@ -39,9 +39,18 @@ let activeObjectUrl: string | null = null;
 
 function stopActiveAudio() {
   if (activeAudio) {
-    activeAudio.pause();
-    activeAudio.src = '';
+    const audio = activeAudio;
     activeAudio = null;
+    audio.onplay = null;
+    audio.onended = null;
+    audio.onerror = null;
+    try {
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+    } catch {
+      // Ignore cleanup errors on audio element
+    }
   }
   if (activeObjectUrl) {
     URL.revokeObjectURL(activeObjectUrl);
@@ -148,6 +157,15 @@ export function speakEmotional(
   }
 }
 
+// ─── ElevenLabs audio cache ───────────────────────────────────────────────────
+// Session-level in-memory cache to avoid duplicate TTS requests
+const ttsAudioCache = new Map<string, ArrayBuffer>();
+
+function getTTSCacheKey(patientId: string, text: string, emotion: string, intensity: number): string {
+  const intensityBucket = Math.round(intensity * 10) / 10;
+  return `${patientId}:${emotion}:${intensityBucket}:${text}`;
+}
+
 // ─── ElevenLabs path ──────────────────────────────────────────────────────────
 
 async function speakElevenLabs(
@@ -157,68 +175,122 @@ async function speakElevenLabs(
   intensity: number,
   callbacks: { onStart?: () => void; onEnd?: () => void },
 ): Promise<void> {
+  let hasStarted = false;
+
   try {
-    const res = await fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patientId, text, emotion, intensity }),
+    const cacheKey = getTTSCacheKey(patientId, text, emotion, intensity);
+    let audioBuffer = ttsAudioCache.get(cacheKey);
+
+    if (!audioBuffer) {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId, text, emotion, intensity }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+        console.warn('[TTS] /api/tts error status:', res.status, data.error ?? '');
+        console.warn('[TTS] ElevenLabs failed — falling back to browser TTS');
+        speakBrowser(text, emotion, patientId, intensity, callbacks);
+        return;
+      }
+
+      const contentType = res.headers.get('content-type');
+      audioBuffer = await res.arrayBuffer();
+
+      console.log('[TTS] /api/tts response received:', {
+        contentType,
+        byteLength: audioBuffer.byteLength,
+      });
+
+      if (!audioBuffer || audioBuffer.byteLength === 0) {
+        console.warn('[TTS] ElevenLabs returned 0-byte audio — falling back to browser TTS');
+        speakBrowser(text, emotion, patientId, intensity, callbacks);
+        return;
+      }
+
+      ttsAudioCache.set(cacheKey, audioBuffer);
+    }
+
+    const audioBlob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+    console.log('[TTS] Audio Blob created:', {
+      type: audioBlob.type,
+      size: audioBlob.size,
     });
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({})) as Record<string, unknown>;
-      console.warn('[TTS] ElevenLabs failed:', data.error ?? res.status, '— falling back to browser TTS');
-      speakBrowser(text, emotion, patientId, intensity, callbacks);
-      return;
-    }
-
-    const audioBlob = await res.blob();
-    if (!audioBlob || audioBlob.size === 0) {
-      console.warn('[TTS] ElevenLabs returned empty audio — falling back to browser TTS');
-      speakBrowser(text, emotion, patientId, intensity, callbacks);
-      return;
-    }
 
     const objectUrl = URL.createObjectURL(audioBlob);
     const audio = new Audio(objectUrl);
 
-    // Store refs so we can stop on next call or session end
+    // Store active references
     activeAudio = audio;
     activeObjectUrl = objectUrl;
 
-    audio.onplay = () => callbacks.onStart?.();
+    audio.onplay = () => {
+      hasStarted = true;
+      console.log('[TTS] HTMLAudioElement onplay fired — ElevenLabs voice active');
+      callbacks.onStart?.();
+    };
 
     audio.onended = () => {
+      console.log('[TTS] HTMLAudioElement onended fired — playback completed successfully');
       callbacks.onEnd?.();
-      // Clean up only if this is still the active audio
+      audio.onplay = null;
+      audio.onended = null;
+      audio.onerror = null;
       if (activeAudio === audio) {
+        activeAudio = null;
+      }
+      if (activeObjectUrl === objectUrl) {
+        activeObjectUrl = null;
+      }
+      URL.revokeObjectURL(objectUrl);
+    };
+
+    audio.onerror = () => {
+      const mediaError = audio.error;
+      console.warn('[TTS] HTMLAudioElement error event:', {
+        code: mediaError?.code,
+        message: mediaError?.message,
+        hasStarted,
+        active: activeAudio === audio,
+      });
+
+      audio.onplay = null;
+      audio.onended = null;
+      audio.onerror = null;
+
+      if (!hasStarted && activeAudio === audio) {
         stopActiveAudio();
-      } else {
-        URL.revokeObjectURL(objectUrl);
+        console.warn('[TTS] Falling back to browser TTS due to media element error');
+        speakBrowser(text, emotion, patientId, intensity, callbacks);
+      } else if (activeAudio === audio) {
+        stopActiveAudio();
       }
     };
 
-    audio.onerror = (e) => {
-      console.warn('[TTS] HTMLAudioElement playback error — falling back to browser TTS', e);
-      if (activeAudio === audio) {
-        stopActiveAudio();
-      } else {
-        URL.revokeObjectURL(objectUrl);
+    try {
+      await audio.play();
+      hasStarted = true;
+    } catch (playErr) {
+      if (playErr instanceof Error && playErr.name === 'AbortError') {
+        console.log('[TTS] audio.play() aborted (audio stopped or interrupted intentionally)');
+        return;
       }
-      speakBrowser(text, emotion, patientId, intensity, callbacks);
-    };
+      console.warn('[TTS] audio.play() rejected:', playErr);
 
-    // play() returns a Promise — catch unhandled rejections (e.g. autoplay policy)
-    audio.play().catch((err) => {
-      console.warn('[TTS] audio.play() rejected — falling back to browser TTS', err);
-      if (activeAudio === audio) {
+      audio.onplay = null;
+      audio.onended = null;
+      audio.onerror = null;
+
+      if (!hasStarted && activeAudio === audio) {
         stopActiveAudio();
-      } else {
-        URL.revokeObjectURL(objectUrl);
+        console.warn('[TTS] Falling back to browser TTS due to play rejection');
+        speakBrowser(text, emotion, patientId, intensity, callbacks);
       }
-      speakBrowser(text, emotion, patientId, intensity, callbacks);
-    });
+    }
   } catch (err) {
-    console.warn('[TTS] ElevenLabs fetch error — falling back to browser TTS', err);
+    console.warn('[TTS] Unexpected ElevenLabs error — falling back to browser TTS:', err);
     speakBrowser(text, emotion, patientId, intensity, callbacks);
   }
 }

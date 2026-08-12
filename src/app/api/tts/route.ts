@@ -1,6 +1,6 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
-import { ELEVENLABS_MODEL, computeElevenLabsSettings, getPatientVoiceEnvKey } from '@/lib/elevenlabs-voice-profiles';
+import { ELEVENLABS_MODEL, computeElevenLabsSettings, resolvePatientVoiceId } from '@/lib/elevenlabs-voice-profiles';
 import type { PatientVariant } from '@/lib/voice-profiles';
 import type { EmotionType } from '@/lib/types';
 
@@ -16,9 +16,13 @@ const ELEVENLABS_TIMEOUT_MS = 12_000;
 export async function POST(req: Request) {
   try {
     // ── Read & validate API key ─────────────────────────────────────────────
-    const apiKey = process.env.ELEVENLABS_API_KEY;
-    if (!apiKey || apiKey.trim() === '' || apiKey === 'your_elevenlabs_api_key_here') {
+    const apiKey = process.env.ELEVENLABS_API_KEY?.trim();
+    if (!apiKey || apiKey === 'your_elevenlabs_api_key_here') {
       return NextResponse.json({ error: 'ElevenLabs API key not configured.' }, { status: 503 });
+    }
+    if (!apiKey.startsWith('sk_')) {
+      console.warn('[/api/tts] ELEVENLABS_API_KEY in .env.local does not start with "sk_". ElevenLabs requires a secret API key starting with "sk_".');
+      return NextResponse.json({ error: 'ElevenLabs API key invalid (must be a secret key starting with sk_).' }, { status: 503 });
     }
 
     // ── Parse request ───────────────────────────────────────────────────────
@@ -43,9 +47,8 @@ export async function POST(req: Request) {
     const safeEmotion: EmotionType = VALID_EMOTIONS.includes(emotion) ? emotion : 'neutral';
 
     // ── Resolve voice ID ────────────────────────────────────────────────────
-    const envKey = getPatientVoiceEnvKey(patientId as PatientVariant);
-    const voiceId = process.env[envKey];
-    if (!voiceId || voiceId.trim() === '') {
+    const voiceId = resolvePatientVoiceId(patientId as PatientVariant);
+    if (!voiceId) {
       return NextResponse.json(
         { error: `ElevenLabs voice ID not configured for patient: ${patientId}` },
         { status: 503 },

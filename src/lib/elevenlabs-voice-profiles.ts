@@ -23,6 +23,8 @@ export const ELEVENLABS_MODEL = 'eleven_turbo_v2_5';
 // ─── Per-patient ElevenLabs baseline settings ────────────────────────────────
 
 export interface ElevenLabsPatientProfile {
+  /** Selected ElevenLabs Voice ID for this patient. */
+  voiceId: string;
   /** Baseline stability (0–1). Higher = more consistent, less expressive. */
   stability: number;
   /** Baseline similarity boost (0–1). Higher = closer to voice clone. */
@@ -35,28 +37,32 @@ export interface ElevenLabsPatientProfile {
 
 export const ELEVENLABS_PATIENT_PROFILES: Record<PatientVariant, ElevenLabsPatientProfile> = {
   james: {
-    // Male, ~45 — professional, controlled
+    // Male, ~45 — professional, controlled (Eric - Smooth, Trustworthy)
+    voiceId: 'cjVigY5qzO86Huf0OWal',
     stability: 0.55,
     similarityBoost: 0.75,
     style: 0.15,
     speed: 0.98,
   },
   robert: {
-    // Male, ~58 — mature, grounded, slightly slower
+    // Male, ~58 — mature, grounded, slightly slower (Bill - Wise, Mature, Balanced)
+    voiceId: 'pqHfZKP75CvOlQylNhV4',
     stability: 0.58,
     similarityBoost: 0.76,
     style: 0.10,
     speed: 0.90,
   },
   margaret: {
-    // Female, ~52 — warm, measured
+    // Female, ~52 — warm, measured (Bella - Professional, Bright, Warm)
+    voiceId: 'hpp4J3VqNfWAUOO0d1Us',
     stability: 0.56,
     similarityBoost: 0.74,
     style: 0.12,
     speed: 0.94,
   },
   emma: {
-    // Female, ~28 — younger, conversational
+    // Female, ~28 — younger, conversational (Sarah - Mature, Reassuring, Confident)
+    voiceId: 'EXAVITQu4vr4xnSDxMaL',
     stability: 0.52,
     similarityBoost: 0.73,
     style: 0.18,
@@ -135,3 +141,18 @@ function clamp(v: number, min: number, max: number): number {
 export function getPatientVoiceEnvKey(patientId: PatientVariant): string {
   return `ELEVENLABS_${patientId.toUpperCase()}_VOICE_ID`;
 }
+
+/**
+ * Resolves the Voice ID for a patient.
+ * Tries the environment variable first (if valid and non-placeholder).
+ * Falls back to the pre-configured voice ID for that patient.
+ */
+export function resolvePatientVoiceId(patientId: PatientVariant): string {
+  const envKey = getPatientVoiceEnvKey(patientId);
+  const envVal = process.env[envKey]?.trim();
+  if (envVal && !envVal.startsWith('your_')) {
+    return envVal;
+  }
+  return ELEVENLABS_PATIENT_PROFILES[patientId]?.voiceId ?? '';
+}
+
