@@ -21,6 +21,12 @@
  * Transcript: Tavus broadcasts `conversation.utterance` events over the Daily
  * data channel. We forward them to the parent so the transcript panel and the
  * feedback report work exactly as they do in the other avatar modes.
+ *
+ * NOTE ON THE DAILY VERSION: Daily enforces a minimum supported client version
+ * server-side and rejects the call outright once a release ages out ("daily-js
+ * version X is no longer supported"). @daily-co/daily-js is therefore pinned to
+ * a recent release and needs bumping periodically — it is not a dependency that
+ * can be left alone indefinitely.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
