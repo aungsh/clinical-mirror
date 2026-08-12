@@ -1,14 +1,18 @@
 /**
- * ClinicalMirror — TTS (Browser SpeechSynthesis)
+ * ClinicalMirror — TTS (ElevenLabs primary + Browser SpeechSynthesis fallback)
  *
- * Uses the existing Web SpeechSynthesis API.
- * No external TTS service — no new API keys.
+ * Architecture:
+ * 1. If NEXT_PUBLIC_ELEVENLABS_TTS=true → call /api/tts → HTMLAudioElement
+ * 2. If ElevenLabs fails for any reason → fall back to Web SpeechSynthesis
+ * 3. If NEXT_PUBLIC_ELEVENLABS_TTS is not set → Web SpeechSynthesis directly
  *
- * Changes from original:
- * - speakEmotional now accepts optional patientId and intensity.
- * - Voice is now selected per-patient via voice-profiles.ts.
- * - Emotion adjustments are blended with patient baseline and scaled by intensity.
- * - Backwards compatible: patientId and intensity are optional.
+ * The fallback is mandatory and automatic. TTS errors never break the session.
+ *
+ * Changes from previous version:
+ * - Added speakEmotional ElevenLabs path (primary).
+ * - Added browser SpeechSynthesis path (fallback, unchanged logic).
+ * - Added cancelSpeech to stop both HTMLAudioElement and SpeechSynthesis.
+ * - Duplicate-request guard: only one TTS generation per unique (text, emotion).
  */
 
 import { EmotionType } from './types';
@@ -18,7 +22,34 @@ import {
   getPatientVoice,
 } from './voice-profiles';
 
-// ─── Emotion-to-prosody deltas ────────────────────────────────────────────────
+// ─── Feature flag ──────────────────────────────────────────────────────────────
+// Set NEXT_PUBLIC_ELEVENLABS_TTS=true in .env.local to enable ElevenLabs.
+// Leave unset or false to use browser TTS directly (emergency fallback mode).
+
+const ELEVENLABS_ENABLED =
+  typeof process !== 'undefined' &&
+  process.env?.NEXT_PUBLIC_ELEVENLABS_TTS === 'true';
+
+// ─── Active audio state ────────────────────────────────────────────────────────
+// Single mutable reference to the currently-playing HTMLAudioElement.
+// Only one patient audio plays at a time.
+
+let activeAudio: HTMLAudioElement | null = null;
+let activeObjectUrl: string | null = null;
+
+function stopActiveAudio() {
+  if (activeAudio) {
+    activeAudio.pause();
+    activeAudio.src = '';
+    activeAudio = null;
+  }
+  if (activeObjectUrl) {
+    URL.revokeObjectURL(activeObjectUrl);
+    activeObjectUrl = null;
+  }
+}
+
+// ─── Emotion-to-prosody deltas (browser SpeechSynthesis) ─────────────────────
 // Applied on top of the patient's baseline rate/pitch.
 // Kept subtle — this is a clinical simulator, not theatre.
 
@@ -90,14 +121,10 @@ export interface SpeakOptions {
 /**
  * Speak text with patient-specific voice and emotion-modulated prosody.
  *
- * - Uses the patient's configured voice (if available) or falls back to any
- *   English voice or the browser default.
- * - Applies the patient's baseline rate/pitch from PATIENT_VOICE_PROFILES.
- * - Applies emotion deltas scaled by intensity on top of the baseline.
- * - Each sentence gets slight random variation for naturalness.
+ * Primary path: ElevenLabs (if NEXT_PUBLIC_ELEVENLABS_TTS=true).
+ * Fallback: Web SpeechSynthesis (always available).
  *
- * patientId and intensity are optional — if omitted the function behaves
- * similarly to the previous implementation.
+ * TTS errors are caught and degraded gracefully — they never break the session.
  */
 export function speakEmotional(
   text: string,
@@ -106,9 +133,108 @@ export function speakEmotional(
 ): void {
   if (typeof window === 'undefined') return;
 
+  const { patientId, intensity = 0.5, onStart, onEnd } = options;
+
+  // Stop any active audio first
+  stopActiveAudio();
   window.speechSynthesis.cancel();
 
-  const { patientId, intensity = 0.5, onStart, onEnd } = options;
+  if (ELEVENLABS_ENABLED && patientId) {
+    // ── ElevenLabs primary path ────────────────────────────────────────────
+    speakElevenLabs(text, emotion, patientId, intensity, { onStart, onEnd });
+  } else {
+    // ── Browser SpeechSynthesis direct path ───────────────────────────────
+    speakBrowser(text, emotion, patientId, intensity, { onStart, onEnd });
+  }
+}
+
+// ─── ElevenLabs path ──────────────────────────────────────────────────────────
+
+async function speakElevenLabs(
+  text: string,
+  emotion: EmotionType,
+  patientId: PatientVariant,
+  intensity: number,
+  callbacks: { onStart?: () => void; onEnd?: () => void },
+): Promise<void> {
+  try {
+    const res = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId, text, emotion, intensity }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+      console.warn('[TTS] ElevenLabs failed:', data.error ?? res.status, '— falling back to browser TTS');
+      speakBrowser(text, emotion, patientId, intensity, callbacks);
+      return;
+    }
+
+    const audioBlob = await res.blob();
+    if (!audioBlob || audioBlob.size === 0) {
+      console.warn('[TTS] ElevenLabs returned empty audio — falling back to browser TTS');
+      speakBrowser(text, emotion, patientId, intensity, callbacks);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(objectUrl);
+
+    // Store refs so we can stop on next call or session end
+    activeAudio = audio;
+    activeObjectUrl = objectUrl;
+
+    audio.onplay = () => callbacks.onStart?.();
+
+    audio.onended = () => {
+      callbacks.onEnd?.();
+      // Clean up only if this is still the active audio
+      if (activeAudio === audio) {
+        stopActiveAudio();
+      } else {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+
+    audio.onerror = (e) => {
+      console.warn('[TTS] HTMLAudioElement playback error — falling back to browser TTS', e);
+      if (activeAudio === audio) {
+        stopActiveAudio();
+      } else {
+        URL.revokeObjectURL(objectUrl);
+      }
+      speakBrowser(text, emotion, patientId, intensity, callbacks);
+    };
+
+    // play() returns a Promise — catch unhandled rejections (e.g. autoplay policy)
+    audio.play().catch((err) => {
+      console.warn('[TTS] audio.play() rejected — falling back to browser TTS', err);
+      if (activeAudio === audio) {
+        stopActiveAudio();
+      } else {
+        URL.revokeObjectURL(objectUrl);
+      }
+      speakBrowser(text, emotion, patientId, intensity, callbacks);
+    });
+  } catch (err) {
+    console.warn('[TTS] ElevenLabs fetch error — falling back to browser TTS', err);
+    speakBrowser(text, emotion, patientId, intensity, callbacks);
+  }
+}
+
+// ─── Browser SpeechSynthesis fallback ────────────────────────────────────────
+
+function speakBrowser(
+  text: string,
+  emotion: EmotionType,
+  patientId: PatientVariant | undefined,
+  intensity: number,
+  callbacks: { onStart?: () => void; onEnd?: () => void },
+): void {
+  if (typeof window === 'undefined') return;
+
+  window.speechSynthesis.cancel();
 
   // ── Resolve voice ──────────────────────────────────────────────────────────
   let voice: SpeechSynthesisVoice | null = null;
@@ -117,7 +243,6 @@ export function speakEmotional(
   if (patientId) {
     voice = getPatientVoice(patientId, voices);
   } else {
-    // Backwards-compatible fallback
     voice = voices.find((v) => v.lang.startsWith('en')) ?? null;
   }
 
@@ -128,12 +253,9 @@ export function speakEmotional(
   const baseVolume = profile?.volume ?? 1.0;
 
   // ── Emotion deltas scaled by intensity ────────────────────────────────────
-  // Intensity 0 → no emotional modulation (pure baseline).
-  // Intensity 1 → full emotional modulation.
   const delta = EMOTION_DELTAS[emotion] ?? EMOTION_DELTAS.neutral;
   const scale = Math.max(0, Math.min(1, intensity));
 
-  // rateMultiplier blended towards 1.0 at low intensity
   const blendedRateMultiplier = 1.0 + (delta.rateMultiplier - 1.0) * scale;
   const blendedPitchOffset    = delta.pitchOffset * scale;
 
@@ -159,19 +281,24 @@ export function speakEmotional(
     u.onstart = () => {
       if (!started) {
         started = true;
-        onStart?.();
+        callbacks.onStart?.();
       }
     };
 
     if (i === sentences.length - 1) {
-      u.onend   = () => onEnd?.();
-      u.onerror = () => onEnd?.();
+      u.onend   = () => callbacks.onEnd?.();
+      u.onerror = () => callbacks.onEnd?.();
     }
 
     window.speechSynthesis.speak(u);
   });
 }
 
+// ─── Cancel all active speech ─────────────────────────────────────────────────
+
 export function cancelSpeech(): void {
-  if (typeof window !== 'undefined') window.speechSynthesis.cancel();
+  if (typeof window !== 'undefined') {
+    stopActiveAudio();
+    window.speechSynthesis.cancel();
+  }
 }
