@@ -858,13 +858,17 @@ function ActiveSession({
   }, [turns, activePanel]);
 
   const speak = useCallback(
-    (text: string, emo: EmotionType) => {
+    (text: string, emo: EmotionType, speakIntensity?: number) => {
       if (isMuted) return;
       speakEmotional(text, emo, {
         onStart: () => setIsSpeaking(true),
         onEnd: () => setIsSpeaking(false),
+        patientId: scenario.avatarVariant,
+        intensity: speakIntensity,
       });
     },
+    // scenario.avatarVariant is stable for the lifetime of a session
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [isMuted],
   );
 
@@ -887,7 +891,7 @@ function ActiveSession({
       if (cancelled) return;
 
       openingTimer = setTimeout(() => {
-        if (!cancelled) speak(scenario.openingLine, "neutral");
+        if (!cancelled) speak(scenario.openingLine, "neutral", scenario.initialIntensity);
       }, 300);
     });
 
@@ -948,7 +952,7 @@ function ActiveSession({
           setRealisticFallback(false);
           setRealisticLoading(true);
           // Still speak via browser TTS so there's no silence during generation
-          speak(data.reply, emo);
+          speak(data.reply, emo, data.intensity);
           fetch("/api/patient-reply-video", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -965,7 +969,7 @@ function ActiveSession({
             .catch(() => setRealisticFallback(true))
             .finally(() => setRealisticLoading(false));
         } else {
-          speak(data.reply, emo);
+          speak(data.reply, emo, data.intensity);
         }
       } else {
         setInput(txt);
