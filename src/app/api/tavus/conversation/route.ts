@@ -11,10 +11,17 @@
  */
 
 import { NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth.server';
+import { getUserUsage } from '@/lib/database.server';
 import { scenarios } from '@/lib/scenarios';
 import { createTavusConversation, isTavusConfigured } from '@/lib/tavus.server';
 
 export async function POST(req: Request) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+  if (user.role !== 'admin' && getUserUsage(user).remaining <= 0) {
+    return NextResponse.json({ error: 'Your two practice attempts for this 30-day period have been used.' }, { status: 429 });
+  }
   if (!isTavusConfigured()) {
     return NextResponse.json(
       { error: 'Live video patients are not configured on this server.', unavailable: true },
@@ -49,11 +56,15 @@ export async function POST(req: Request) {
 
     // Concurrency / quota exhaustion is the most common demo-day failure.
     const isCapacity = /concurren|quota|limit|maximum/i.test(message);
+    const publicMessage = isCapacity
+      ? 'All live video patients are currently in use. Try the stylised avatar, or wait a moment and retry.'
+      : 'The live video patient could not be started. Try the stylised avatar instead.';
+    const errorMessage = process.env.NODE_ENV === 'development'
+      ? `${publicMessage} Tavus reported: ${message.replace(/^Tavus create conversation failed:\s*/i, '')}`
+      : publicMessage;
     return NextResponse.json(
       {
-        error: isCapacity
-          ? 'All live video patients are currently in use. Try the stylised avatar, or wait a moment and retry.'
-          : 'The live video patient could not be started. Try the stylised avatar instead.',
+        error: errorMessage,
       },
       { status: isCapacity ? 429 : 502 },
     );

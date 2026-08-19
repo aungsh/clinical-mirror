@@ -1,5 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth.server';
+import { getUserUsage } from '@/lib/database.server';
 import { scenarios } from '@/lib/scenarios';
 import { apiError, parseJsonObject, safeText, validateTurns } from '@/lib/ai-api.server';
 import type { EmotionType } from '@/lib/types';
@@ -7,6 +9,11 @@ import type { EmotionType } from '@/lib/types';
 const validEmotions: EmotionType[] = ['neutral', 'sad', 'angry', 'anxious', 'distressed', 'relieved', 'calm'];
 
 export async function POST(req: Request) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+  if (user.role !== 'admin' && getUserUsage(user).remaining <= 0) {
+    return NextResponse.json({ error: 'Your two practice attempts for this 30-day period have been used.' }, { status: 429 });
+  }
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return NextResponse.json({ error: 'Gemini API key is missing.' }, { status: 503 });

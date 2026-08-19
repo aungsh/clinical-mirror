@@ -1,5 +1,6 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth.server';
 import { ELEVENLABS_MODEL, computeElevenLabsSettings, resolvePatientVoiceId } from '@/lib/elevenlabs-voice-profiles';
 import type { PatientVariant } from '@/lib/voice-profiles';
 import type { EmotionType } from '@/lib/types';
@@ -14,6 +15,7 @@ const VALID_EMOTIONS: EmotionType[] = ['neutral', 'calm', 'anxious', 'sad', 'dis
 const ELEVENLABS_TIMEOUT_MS = 12_000;
 
 export async function POST(req: Request) {
+  if (!await getCurrentUser()) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   try {
     // ── Read & validate API key ─────────────────────────────────────────────
     const apiKey = process.env.ELEVENLABS_API_KEY?.trim();

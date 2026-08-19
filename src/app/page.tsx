@@ -7,6 +7,7 @@ import { Halo } from '@/components/site/Halo';
 import { Reveal } from '@/components/site/Reveal';
 import { HeroPreview } from '@/components/site/HeroPreview';
 import { ScenarioCard } from '@/components/site/ScenarioCard';
+import { getCurrentUser } from '@/lib/auth.server';
 
 const STEPS = [
   {
@@ -22,7 +23,7 @@ const STEPS = [
   {
     n: '03',
     title: 'Read the evidence',
-    body: 'Scored on empathy, clarity and de-escalation, with every point tied to a specific turn you took. Then run it again.',
+    body: 'Receive one concise learning focus, practise it immediately, and try the conversation again. Administrators retain the evidence needed for coaching review.',
   },
 ];
 
@@ -42,7 +43,7 @@ const FEATURES = [
   {
     icon: LineChart,
     title: 'Feedback with receipts',
-    body: 'No vague scores. Each strength and each suggestion quotes the exact turn it came from, so you know precisely what to change.',
+    body: 'Learners get a short, direct next step. Authorised coaches can review the transcript evidence and track development across attempts.',
     tone: 'rgba(250, 180, 117, 0.36)',
   },
   {
@@ -62,14 +63,17 @@ const SAFETY = [
 
 const STATS = [
   { k: `${scenarios.length}`, v: 'Scenarios' },
-  { k: '3', v: 'Skills scored' },
+  { k: '3', v: 'Skills practised' },
   { k: 'Live', v: 'Video patients' },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const user = await getCurrentUser();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
-      <TopNav />
+      <TopNav cta={user
+        ? { label: user.role === 'admin' ? 'Admin dashboard' : 'My practice', href: user.role === 'admin' ? '/admin' : '/dashboard' }
+        : { label: 'Sign in', href: '/login' }} />
 
       <main style={{ flex: 1 }}>
         {/* ---------- HERO ---------- */}

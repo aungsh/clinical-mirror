@@ -20,6 +20,13 @@
 # production
 /build
 
+# local SQLite data (never commit user accounts, transcripts, or evaluations)
+/data/
+*.db
+*.db-shm
+*.db-wal
+.next-dev.*.log
+
 # misc
 .DS_Store
 *.pem

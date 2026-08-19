@@ -2,6 +2,8 @@ export type AvatarMode = 'mii' | 'realistic' | 'tavus';
 
 export type StockAvatarId = 'patient-a' | 'patient-b' | 'patient-c';
 
+export type UserRole = 'user' | 'admin';
+
 /** Response from POST /api/tavus/conversation */
 export interface TavusConversation {
   conversationId: string;
@@ -72,6 +74,75 @@ export interface FeedbackScore {
   deescalation: number;
 }
 
+export type EvaluationConfidence = 'low' | 'moderate' | 'high';
+
+export interface DeliveryCapture {
+  audioSignalsCaptured: boolean;
+  speechDurationSeconds: number;
+  speakingSegments: number;
+  interruptions: number;
+  audioSampleCount: number;
+  averageAudioLevel: number;
+  peakAudioLevel: number;
+}
+
+export interface DeliveryMetrics extends DeliveryCapture {
+  learnerWordCount: number;
+  averageWordsPerTurn: number;
+  speakingSharePercent: number;
+  questionCount: number;
+  fillerCount: number;
+  hedgingCount: number;
+  profanityCount: number;
+  repeatedPhraseCount: number;
+  averageResponseIntervalSeconds: number | null;
+  interpretation: string;
+}
+
+export interface RubricAssessment {
+  id: string;
+  label: string;
+  score: number;
+  confidence: EvaluationConfidence;
+  rationale: string;
+  evidence: FeedbackEvidence[];
+  scenarioSpecific?: boolean;
+}
+
+export interface GoalAssessment {
+  goal: string;
+  status: 'observed' | 'partial' | 'not-observed';
+  evidence: string;
+}
+
+export interface ReviewFlag {
+  severity: 'information' | 'review';
+  label: string;
+  evidence: string;
+  turn?: number;
+  humanReviewRequired: boolean;
+}
+
+export interface LearnerPriority extends Improvement {
+  whyItMatters: string;
+  tryInstead: string;
+}
+
+export interface LearnerProgress {
+  previousAttemptNumber: number;
+  improved: string[];
+  declined: string[];
+  unchanged: string[];
+  note: string;
+}
+
+export interface LearnerRubricSnapshot {
+  id: string;
+  label: string;
+  score: number;
+  descriptor: 'Needs attention' | 'Developing' | 'Consistent';
+}
+
 export interface Improvement {
   turn: number;
   moment: string;
@@ -84,6 +155,13 @@ export interface FeedbackEvidence {
   observation: string;
 }
 
+export interface CoachingCheckpoint {
+  observedStrength: FeedbackEvidence;
+  focus: Improvement;
+  tryNext: string;
+  reflectionQuestion: string;
+}
+
 export interface FeedbackResult {
   scores: FeedbackScore;
   summary: string;
@@ -91,12 +169,53 @@ export interface FeedbackResult {
   improvements: Improvement[];
   limitations: string[];
   retryPlan: string[];
-  overallConfidence: 'low' | 'moderate' | 'high';
+  overallConfidence: EvaluationConfidence;
   educationalDisclaimer: string;
+}
+
+export interface LearnerFeedback {
+  version: 2;
+  headline: string;
+  summary: string;
+  rubricSnapshot: LearnerRubricSnapshot[];
+  strengths: FeedbackEvidence[];
+  priorities: LearnerPriority[];
+  nextAttemptPlan: string[];
+  progress?: LearnerProgress;
+  educationalDisclaimer: string;
+  /** Legacy fields are retained so old saved sessions remain readable. */
+  whatWorked?: string;
+  focus?: string;
+  nextStep?: string;
+}
+
+export interface AdminEvaluation extends FeedbackResult {
+  version: 2;
+  factualSummary: string;
+  rubrics: RubricAssessment[];
+  goalCompletion: GoalAssessment[];
+  delivery: DeliveryMetrics;
+  flags: ReviewFlag[];
+  coachingPlan: string[];
+  fallbackUsed: boolean;
+}
+
+export interface RubricOverride {
+  rubricId: string;
+  score: number;
+  rationale: string;
+}
+
+export interface SessionReview {
+  reviewerName: string;
+  notes: string;
+  overrides: RubricOverride[];
+  updatedAt: string;
 }
 
 export interface SessionData {
   scenario: Scenario;
   turns: Turn[];
-  feedback: FeedbackResult;
+  feedback: LearnerFeedback;
+  sessionId?: string;
 }
