@@ -153,4 +153,43 @@ export const scenarios: Scenario[] = [
     openingLine:
       "I know, I know, you're going to tell me my blood sugar is too high again. I've heard the speech before. I'm not a child, I understand the risks.",
   },
+  {
+    id: "performance-review",
+    title: "Performance Review Conversation",
+    description:
+      "Give clear, respectful feedback to a junior staff member about repeated handover and documentation gaps.",
+    difficulty: "medium",
+    patientName: "Aisha Rahman",
+    patientAge: 26,
+    icon: "P",
+    avatarVariant: "emma",
+    availability: "available",
+    initialIntensity: 0.55,
+    maxTurns: 12,
+    patientBackground:
+      "Aisha is a junior production team member in a pharmaceutical manufacturing environment. She has been in the role for ten months and is usually dependable. Over the last six weeks, three shift handovers were late and two batch-record entries were incomplete while the team was short-staffed.",
+    clinicalContext:
+      "This is a scheduled one-to-one performance conversation. The learner is Aisha's first-time line manager. Discuss only the supplied observable examples, invite her perspective, explain the operational impact, and agree support and follow-up without making assumptions about attitude or ability.",
+    sessionGoal:
+      "Conduct a fair, specific performance review that makes expectations clear, hears Aisha's perspective, and ends with an agreed improvement and follow-up plan.",
+    objectives: [
+      "Open with the purpose and create space for dialogue",
+      "Describe specific observed behaviour and its impact without personal labels",
+      "Agree realistic actions, support, ownership, and a follow-up date",
+    ],
+    doList: [
+      "Use the documented handover and batch-record examples",
+      "Ask for Aisha's perspective before proposing a solution",
+      "Check that expectations and support are understood",
+      "Close with agreed actions and a review point",
+    ],
+    avoidList: [
+      "Vague labels such as careless or uncommitted",
+      "Inventing incidents or speaking for absent colleagues",
+      "Threatening discipline or deciding employment outcomes",
+      "Doing all the talking without checking Aisha's view",
+    ],
+    openingLine:
+      "You said this meeting was about my performance. Am I in trouble? I thought I was keeping up, especially with the team being short-staffed.",
+  },
 ];

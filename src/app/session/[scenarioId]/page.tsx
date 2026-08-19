@@ -13,6 +13,8 @@ import {
   AvatarMode,
   StockAvatarId,
   TavusStatus,
+  CoachingCheckpoint,
+  DeliveryCapture,
 } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 import {
@@ -933,8 +935,9 @@ function BriefingScreen({
                 <span>
                   I understand this is an educational AI simulation. My
                   transcript is sent to Gemini for a response and formative
-                  feedback, so I will not enter real patient names or
-                  identifiable information.
+                  feedback, then stored for authorised organisation
+                  administrators to review my training progress. I will not
+                  enter real patient names or identifiable information.
                 </span>
               </label>
               <button
@@ -980,7 +983,7 @@ function ActiveSession({
   avatarId,
 }: {
   scenario: (typeof scenarios)[0];
-  onEnd: (turns: Turn[]) => void;
+  onEnd: (turns: Turn[], deliveryCapture?: DeliveryCapture) => void;
   avatarMode: AvatarMode;
   avatarId: StockAvatarId;
 }) {
@@ -993,13 +996,17 @@ function ActiveSession({
   const [isMicActive, setIsMicActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [activePanel, setActivePanel] = useState<
-    "none" | "transcript" | "briefing"
+    "none" | "transcript" | "briefing" | "coach"
   >("none");
   const [shouldAutoSend, setShouldAutoSend] = useState(false);
   const [micSupported, setMicSupported] = useState(true);
   const [patientTurnCount, setPatientTurnCount] = useState(0);
   const [lastPatientText, setLastPatientText] = useState(scenario.openingLine);
   const [requestError, setRequestError] = useState("");
+  const [coaching, setCoaching] = useState<CoachingCheckpoint | null>(null);
+  const [coachingError, setCoachingError] = useState("");
+  const [isCoaching, setIsCoaching] = useState(false);
+  const [deliveryCapture, setDeliveryCapture] = useState<DeliveryCapture | undefined>(undefined);
 
   // ── Realistic avatar state ────────────────────────────────────────────
   const [realisticVideoUrl, setRealisticVideoUrl] = useState<string | null>(
@@ -1142,6 +1149,39 @@ function ActiveSession({
     [scenario.id],
   );
 
+  const requestCoaching = async () => {
+    setActivePanel("coach");
+    setCoachingError("");
+
+    const completedLearnerTurns = turns.filter(
+      (turn) => turn.speaker === "student",
+    ).length;
+    if (completedLearnerTurns < 2) {
+      setCoachingError(
+        "Complete at least two responses first so the coach has enough evidence.",
+      );
+      return;
+    }
+
+    setIsCoaching(true);
+    try {
+      const res = await fetch("/api/coaching", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scenarioId: scenario.id, history: turns }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Coaching could not be generated.");
+      setCoaching(data as CoachingCheckpoint);
+    } catch (error) {
+      setCoachingError(
+        error instanceof Error ? error.message : "Coaching could not be generated.",
+      );
+    } finally {
+      setIsCoaching(false);
+    }
+  };
+
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
     const txt = input.trim();
@@ -1281,7 +1321,7 @@ function ActiveSession({
     setRequestError("");
     cancelSpeech();
     recognitionRef.current?.stop();
-    onEnd(turns);
+    onEnd(turns, deliveryCapture);
   };
 
   const ec = EMOTION_COLORS[emotion];
@@ -1391,6 +1431,28 @@ function ActiveSession({
         </button>
 
         <button
+          id="btn-toggle-coach"
+          onClick={requestCoaching}
+          style={{
+            padding: "5px 12px",
+            fontSize: 12,
+            borderRadius: "var(--r)",
+            background:
+              activePanel === "coach"
+                ? "var(--accent-bg)"
+                : "var(--surface-2)",
+            border: `1px solid ${activePanel === "coach" ? "var(--accent-bd)" : "var(--border)"}`,
+            color: activePanel === "coach" ? "var(--accent)" : "var(--text-2)",
+            cursor: isCoaching ? "wait" : "pointer",
+            fontFamily: "inherit",
+            transition: "all 0.15s",
+          }}
+          title="Get one evidence-based coaching checkpoint without a score"
+        >
+          {isCoaching ? "Coaching…" : "Coach me"}
+        </button>
+
+        <button
           id="btn-toggle-briefing"
           onClick={() =>
             setActivePanel((p) => (p === "briefing" ? "none" : "briefing"))
@@ -1483,8 +1545,9 @@ function ActiveSession({
             overflow: "hidden",
           }}
         >
-          {/* Patient speech */}
-          <div
+          {/* Patient speech. Tavus captions move into the video after joining. */}
+          {(!isTavus || patientTurnCount === 0) && (
+            <div
             style={{
               maxWidth: 520,
               width: "100%",
@@ -1525,7 +1588,8 @@ function ActiveSession({
                 {bubbleText}
               </p>
             )}
-          </div>
+            </div>
+          )}
 
           {/* Avatar — Live video (Tavus), Realistic clip, or Mii */}
           <div
@@ -1546,6 +1610,7 @@ function ActiveSession({
                 onStatusChange={setTavusStatus}
                 onUtterance={handleTavusUtterance}
                 onSpeakingChange={setIsSpeaking}
+                onDeliveryMetrics={setDeliveryCapture}
               />
             ) : avatarMode === "realistic" && !realisticFallback ? (
               <RealisticAvatar
@@ -1720,6 +1785,122 @@ function ActiveSession({
                     </div>
                   ))}
                   <div ref={transcriptEndRef} />
+                </div>
+              </>
+            )}
+
+            {activePanel === "coach" && (
+              <>
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    borderBottom: "1px solid var(--border)",
+                  }}
+                >
+                  <span
+                    className="font-mono"
+                    style={{
+                      fontSize: 9,
+                      color: "var(--accent)",
+                      letterSpacing: "0.14em",
+                    }}
+                  >
+                    LEARNING CHECKPOINT · NO SCORE
+                  </span>
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    overflowY: "auto",
+                    padding: "18px 16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 16,
+                  }}
+                >
+                  {isCoaching && (
+                    <p style={{ margin: 0, color: "var(--text-2)", fontSize: 13 }}>
+                      Reviewing your conversation so far…
+                    </p>
+                  )}
+
+                  {coachingError && (
+                    <div
+                      style={{
+                        padding: 12,
+                        border: "1px solid var(--warn)",
+                        borderRadius: "var(--r)",
+                        color: "var(--text-2)",
+                        fontSize: 12,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {coachingError}
+                    </div>
+                  )}
+
+                  {!isCoaching && coaching && (
+                    <>
+                      <section>
+                        <p className="font-mono" style={{ margin: "0 0 6px", color: "var(--primary)", fontSize: 9, letterSpacing: "0.12em" }}>
+                          KEEP DOING
+                        </p>
+                        <p style={{ margin: "0 0 5px", color: "var(--text-1)", fontSize: 12, fontWeight: 600, lineHeight: 1.5 }}>
+                          Turn {coaching.observedStrength.turn}: “{coaching.observedStrength.moment}”
+                        </p>
+                        <p style={{ margin: 0, color: "var(--text-2)", fontSize: 12, lineHeight: 1.55 }}>
+                          {coaching.observedStrength.observation}
+                        </p>
+                      </section>
+
+                      <section style={{ paddingTop: 14, borderTop: "1px solid var(--border-sub)" }}>
+                        <p className="font-mono" style={{ margin: "0 0 6px", color: "var(--warn)", fontSize: 9, letterSpacing: "0.12em" }}>
+                          FOCUS NOW
+                        </p>
+                        <p style={{ margin: "0 0 5px", color: "var(--text-1)", fontSize: 12, fontWeight: 600, lineHeight: 1.5 }}>
+                          Turn {coaching.focus.turn}: “{coaching.focus.moment}”
+                        </p>
+                        <p style={{ margin: 0, color: "var(--text-2)", fontSize: 12, lineHeight: 1.55 }}>
+                          {coaching.focus.suggestion}
+                        </p>
+                      </section>
+
+                      <section style={{ padding: 14, background: "var(--accent-bg)", border: "1px solid var(--accent-bd)", borderRadius: "var(--r)" }}>
+                        <p className="font-mono" style={{ margin: "0 0 7px", color: "var(--accent)", fontSize: 9, letterSpacing: "0.12em" }}>
+                          TRY IN YOUR NEXT RESPONSE
+                        </p>
+                        <p style={{ margin: 0, color: "var(--text-1)", fontSize: 13, lineHeight: 1.55 }}>
+                          “{coaching.tryNext}”
+                        </p>
+                      </section>
+
+                      <section>
+                        <p className="font-mono" style={{ margin: "0 0 6px", color: "var(--text-3)", fontSize: 9, letterSpacing: "0.12em" }}>
+                          PAUSE AND REFLECT
+                        </p>
+                        <p style={{ margin: 0, color: "var(--text-2)", fontSize: 12, lineHeight: 1.55 }}>
+                          {coaching.reflectionQuestion}
+                        </p>
+                      </section>
+
+                      <button
+                        onClick={requestCoaching}
+                        style={{
+                          marginTop: 4,
+                          padding: "9px 12px",
+                          background: "var(--surface-2)",
+                          border: "1px solid var(--border)",
+                          borderRadius: "var(--r)",
+                          color: "var(--text-2)",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          fontSize: 12,
+                        }}
+                      >
+                        Refresh after more practice
+                      </button>
+                    </>
+                  )}
                 </div>
               </>
             )}
@@ -2229,7 +2410,7 @@ export default function SessionPage({
     );
 
 
-  const handleEnd = async (turns: Turn[]) => {
+  const handleEnd = async (turns: Turn[], deliveryCapture?: DeliveryCapture) => {
     setIsEnding(true);
     setEndError("");
     const intensityTimeSeries = turns
@@ -2243,12 +2424,19 @@ export default function SessionPage({
           scenarioId,
           history: turns,
           intensityTimeSeries,
+          avatarMode,
+          deliveryCapture,
         }),
       });
-      const feedback = await res.json().catch(() => ({}));
+      const result = await res.json().catch(() => ({}));
       if (!res.ok)
-        throw new Error(feedback.error ?? "Feedback could not be generated.");
-      const session = { scenario, turns, feedback };
+        throw new Error(result.error ?? "Feedback could not be generated.");
+      const session = {
+        scenario,
+        turns,
+        feedback: result.feedback,
+        sessionId: result.sessionId,
+      };
       sessionStorage.setItem("clinicalmirror_session", JSON.stringify(session));
       const previous = JSON.parse(
         sessionStorage.getItem("clinicalmirror_attempts") ?? "[]",

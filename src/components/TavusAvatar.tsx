@@ -34,9 +34,10 @@ import { Mic, MicOff, Video, VideoOff, Volume2 } from 'lucide-react';
 import type {
   DailyCall,
   DailyEventObjectAppMessage,
+  DailyEventObjectLocalAudioLevel,
   DailyParticipant,
 } from '@daily-co/daily-js';
-import type { EmotionType, TavusConversation, TavusStatus } from '@/lib/types';
+import type { DeliveryCapture, EmotionType, TavusConversation, TavusStatus } from '@/lib/types';
 
 /* ─── Props ──────────────────────────────────────────────────────────────── */
 
@@ -60,6 +61,7 @@ export interface TavusAvatarProps {
   onUtterance?: (utterance: { role: 'student' | 'patient'; text: string }) => void;
   onSpeakingChange?: (speaking: boolean) => void;
   onConversationReady?: (conversation: TavusConversation) => void;
+  onDeliveryMetrics?: (metrics: DeliveryCapture) => void;
   onError?: (message: string) => void;
 }
 
@@ -91,6 +93,7 @@ interface TavusEvent {
     role?: string;
     speech?: string;
     text?: string;
+    final?: boolean;
   };
 }
 
@@ -116,6 +119,7 @@ export function TavusAvatar({
   onUtterance,
   onSpeakingChange,
   onConversationReady,
+  onDeliveryMetrics,
   onError,
 }: TavusAvatarProps) {
   const [status, setStatus] = useState<TavusStatus>('idle');
@@ -123,6 +127,10 @@ export function TavusAvatar({
   const [isPatientSpeaking, setIsPatientSpeaking] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [cameraOn, setCameraOn] = useState(cameraEnabled);
+  const [liveCaption, setLiveCaption] = useState<{
+    role: 'student' | 'patient';
+    text: string;
+  } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   /** Second, heavily blurred copy of the same stream — the ambient halo. */
@@ -133,12 +141,29 @@ export function TavusAvatar({
   const videoTrackIdRef = useRef<string | null>(null);
   const audioTrackIdRef = useRef<string | null>(null);
   const teardownRef = useRef(false);
+  const captionClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const studentSpeechStartRef = useRef<number | null>(null);
+  const patientSpeakingRef = useRef(false);
+  const audioLevelSumRef = useRef(0);
+  const deliveryRef = useRef<DeliveryCapture>({
+    audioSignalsCaptured: false,
+    speechDurationSeconds: 0,
+    speakingSegments: 0,
+    interruptions: 0,
+    audioSampleCount: 0,
+    averageAudioLevel: 0,
+    peakAudioLevel: 0,
+  });
 
   // Keep callbacks in refs so the Daily event handlers never go stale.
-  const cb = useRef({ onStatusChange, onUtterance, onSpeakingChange, onConversationReady, onError });
+  const cb = useRef({ onStatusChange, onUtterance, onSpeakingChange, onConversationReady, onDeliveryMetrics, onError });
   useEffect(() => {
-    cb.current = { onStatusChange, onUtterance, onSpeakingChange, onConversationReady, onError };
-  }, [onStatusChange, onUtterance, onSpeakingChange, onConversationReady, onError]);
+    cb.current = { onStatusChange, onUtterance, onSpeakingChange, onConversationReady, onDeliveryMetrics, onError };
+  }, [onStatusChange, onUtterance, onSpeakingChange, onConversationReady, onDeliveryMetrics, onError]);
+
+  const emitDeliveryMetrics = useCallback(() => {
+    cb.current.onDeliveryMetrics?.({ ...deliveryRef.current });
+  }, []);
 
   const glowColor = GLOW_COLORS[emotion];
 
@@ -223,6 +248,24 @@ export function TavusAvatar({
     const eventType = data?.event_type;
     if (!eventType) return;
 
+    if (eventType === 'conversation.utterance.streaming') {
+      const role = normaliseRole(data?.properties?.role);
+      const text = (data?.properties?.speech ?? data?.properties?.text ?? '').trim();
+
+      if (role && text) {
+        if (captionClearTimerRef.current) clearTimeout(captionClearTimerRef.current);
+        setLiveCaption({ role, text });
+
+        if (data?.properties?.final) {
+          captionClearTimerRef.current = setTimeout(() => {
+            setLiveCaption(null);
+            captionClearTimerRef.current = null;
+          }, 2000);
+        }
+      }
+      return;
+    }
+
     if (eventType.endsWith('utterance')) {
       const role = normaliseRole(data?.properties?.role);
       const text = (data?.properties?.speech ?? data?.properties?.text ?? '').trim();
@@ -233,8 +276,12 @@ export function TavusAvatar({
     if (eventType.includes('started_speaking')) {
       const role = normaliseRole(data?.properties?.role) ?? 'patient';
       if (role === 'patient') {
+        patientSpeakingRef.current = true;
         setIsPatientSpeaking(true);
         cb.current.onSpeakingChange?.(true);
+      } else {
+        studentSpeechStartRef.current = Date.now();
+        if (patientSpeakingRef.current) deliveryRef.current.interruptions += 1;
       }
       return;
     }
@@ -242,11 +289,17 @@ export function TavusAvatar({
     if (eventType.includes('stopped_speaking')) {
       const role = normaliseRole(data?.properties?.role) ?? 'patient';
       if (role === 'patient') {
+        patientSpeakingRef.current = false;
         setIsPatientSpeaking(false);
         cb.current.onSpeakingChange?.(false);
+      } else if (studentSpeechStartRef.current !== null) {
+        deliveryRef.current.speechDurationSeconds += (Date.now() - studentSpeechStartRef.current) / 1000;
+        deliveryRef.current.speakingSegments += 1;
+        studentSpeechStartRef.current = null;
+        emitDeliveryMetrics();
       }
     }
-  }, []);
+  }, [emitDeliveryMetrics]);
 
   /* ── Start the call (explicit user gesture) ──────────────────────────── */
 
@@ -302,6 +355,15 @@ export function TavusAvatar({
         .on('participant-updated', () => attachRemoteTracks(call))
         .on('track-started', () => attachRemoteTracks(call))
         .on('app-message', handleAppMessage)
+        .on('local-audio-level', (event: DailyEventObjectLocalAudioLevel) => {
+          const level = Math.max(0, Number(event.audioLevel) || 0);
+          deliveryRef.current.audioSignalsCaptured = true;
+          deliveryRef.current.audioSampleCount += 1;
+          audioLevelSumRef.current += level;
+          deliveryRef.current.averageAudioLevel = audioLevelSumRef.current / deliveryRef.current.audioSampleCount;
+          deliveryRef.current.peakAudioLevel = Math.max(deliveryRef.current.peakAudioLevel, level);
+          if (deliveryRef.current.audioSampleCount % 10 === 0) emitDeliveryMetrics();
+        })
         .on('left-meeting', () => {
           if (!teardownRef.current) updateStatus('ended');
         })
@@ -317,6 +379,8 @@ export function TavusAvatar({
         startAudioOff: !micEnabled,
       });
 
+      await call.startLocalAudioLevelObserver(200).catch(() => undefined);
+
       if (teardownRef.current) return;
       updateStatus('waiting');
       attachRemoteTracks(call);
@@ -328,7 +392,7 @@ export function TavusAvatar({
           : 'Could not join the consultation room.',
       );
     }
-  }, [attachRemoteTracks, cameraOn, fail, handleAppMessage, micEnabled, scenarioId, status, updateStatus]);
+  }, [attachRemoteTracks, cameraOn, emitDeliveryMetrics, fail, handleAppMessage, micEnabled, scenarioId, status, updateStatus]);
 
   /* ── Mic / camera toggles follow the parent ──────────────────────────── */
 
@@ -360,10 +424,15 @@ export function TavusAvatar({
     return () => {
       window.removeEventListener('pagehide', endConversationBeacon);
       teardownRef.current = true;
+      if (captionClearTimerRef.current) {
+        clearTimeout(captionClearTimerRef.current);
+        captionClearTimerRef.current = null;
+      }
 
       const call = callRef.current;
       callRef.current = null;
       if (call) {
+        try { call.stopLocalAudioLevelObserver(); } catch { /* observer may already be stopped */ }
         void call
           .leave()
           .catch(() => undefined)
@@ -599,6 +668,62 @@ export function TavusAvatar({
             >
               {cameraOn ? <Video size={13} /> : <VideoOff size={13} />}
             </button>
+          </div>
+        )}
+
+        {/* Progressive closed captions from Tavus's streaming utterance event. */}
+        {showVideo && liveCaption && (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              position: 'absolute',
+              left: '50%',
+              bottom: 72,
+              transform: 'translateX(-50%)',
+              width: 'min(82%, 720px)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 5,
+              pointerEvents: 'none',
+              textAlign: 'center',
+              zIndex: 2,
+            }}
+          >
+            <span
+              className="font-mono"
+              style={{
+                padding: '3px 7px',
+                borderRadius: 5,
+                background: 'rgba(8,10,12,0.72)',
+                color: 'rgba(255,255,255,0.72)',
+                fontSize: 9,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {liveCaption.role === 'patient' ? patientName : 'You'}
+            </span>
+            <span
+              style={{
+                display: '-webkit-box',
+                overflow: 'hidden',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: 3,
+                padding: '6px 10px',
+                borderRadius: 7,
+                background: 'rgba(8,10,12,0.78)',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.24)',
+                color: '#fff',
+                fontSize: 'clamp(13px, 1.7vw, 18px)',
+                fontWeight: 500,
+                lineHeight: 1.35,
+                textShadow: '0 1px 2px rgba(0,0,0,0.7)',
+              }}
+            >
+              {liveCaption.text}
+            </span>
           </div>
         )}
 
