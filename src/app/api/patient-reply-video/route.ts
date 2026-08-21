@@ -19,6 +19,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth.server';
 import { EmotionType, StockAvatarId } from '@/lib/types';
 
 // ── ElevenLabs voice settings per emotion ──────────────────────────────────
@@ -159,6 +160,7 @@ export interface PatientReplyVideoRequest {
 }
 
 export async function POST(req: NextRequest) {
+  if (!await getCurrentUser()) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   let body: PatientReplyVideoRequest;
 
   try {

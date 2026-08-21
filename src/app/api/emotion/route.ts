@@ -15,6 +15,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth.server';
 import { scenarios } from '@/lib/scenarios';
 import { apiError, parseJsonObject } from '@/lib/ai-api.server';
 import type { EmotionType } from '@/lib/types';
@@ -30,6 +31,7 @@ const VALID_EMOTIONS: EmotionType[] = [
 ];
 
 export async function POST(req: Request) {
+  if (!await getCurrentUser()) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {

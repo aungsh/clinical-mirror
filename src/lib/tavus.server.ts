@@ -187,7 +187,8 @@ export async function createTavusConversation(
     custom_greeting: scenario.openingLine,
     properties: {
       // Hard cap so an abandoned tab cannot burn conversation minutes.
-      max_call_duration: options.maxCallDurationSeconds ?? 600,
+      // Organisational pilot sessions are budgeted for up to 25 minutes.
+      max_call_duration: options.maxCallDurationSeconds ?? 1500,
       // End the room shortly after the student closes the tab.
       participant_left_timeout: 20,
       // End the room if nobody ever joins.

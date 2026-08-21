@@ -1,6 +1,6 @@
 # ClinicalMirror
 
-ClinicalMirror is an AI patient communication trainer. Healthcare students rehearse difficult clinical conversations with fictional AI patients, then receive formative feedback on empathy, clarity, and de-escalation, complete with transcript evidence and a concrete retry plan.
+ClinicalMirror is an AI communication-practice platform. Learners rehearse difficult medical and workplace conversations, receive concise formative guidance, and repeat the scenario. Authorised organisation administrators can review evidence-linked reports and development across attempts.
 
 The project is a hackathon prototype. It is built for teaching and rehearsal, not for clinical use.
 
@@ -31,15 +31,11 @@ A session moves through four screens.
 3. **Patient selection** (avatar-select stage). Choose how the patient is rendered: stylised, realistic, or live video.
 4. **Live session** (active stage). Speak using browser speech recognition or type. The patient replies in text and voice, and the interface shows the patient's current emotion and intensity alongside a voice orb that reacts to speaking and listening states. A turn counter tracks progress against the scenario's suggested length.
 
-Ending the session sends the full transcript and the patient intensity time series to the feedback endpoint, then routes to `/feedback`, which shows:
+Ending the session creates two outputs. The learner receives a concise evidence-linked review with a rubric snapshot, exact turn examples, priority improvements, a next-attempt plan, and progress against the previous attempt. The administrator receives a versioned report with general and scenario-specific rubrics, delivery observations, flags, goals, coaching actions, transcript evidence, confidence and limitations.
 
-- Scores out of 10 for empathy, clarity, and de-escalation.
-- A Recharts line chart of patient emotional intensity across the conversation.
-- Strengths and improvements, each citing a specific turn in the transcript.
-- A retry plan, stated limitations, and an overall confidence rating.
-- The complete transcript.
+The report combines deterministic observable-language rules with Gemini enrichment. If Gemini blocks sensitive or profane content, is unavailable, or returns malformed output, the rules-based report is still saved and clearly marked as a fallback. Administrators can add notes and score overrides without erasing the original automated result.
 
-Sessions are stored in `sessionStorage` under `clinicalmirror_session` (most recent) and `clinicalmirror_attempts` (last eight attempts, used to show an improvement delta between retries). There is no database, no account system, and nothing persists after the tab closes.
+Accounts, hashed passwords, database-backed login sessions, practice transcripts, and both evaluation views persist in `data/clinical-mirror.db`. The learner-facing result is also placed temporarily in `sessionStorage` for the immediate review screen; the restricted administrator report is never returned to the learner browser.
 
 ## Scenarios
 
@@ -49,6 +45,7 @@ Sessions are stored in `sessionStorage` under `clinicalmirror_session` (most rec
 | `angry-family` | Angry family member | James Morrison, 45 | Hard | 0.85 | Available |
 | `mental-health` | Mental health crisis | Emma Sullivan, 28 | Medium | 0.70 | Held for faculty review |
 | `behavior-change` | Behaviour change conversation | Robert Tan, 58 | Medium | 0.35 | Available |
+| `performance-review` | Performance review conversation | Aisha Rahman, 26 | Medium | 0.55 | Available |
 
 All scenarios suggest 10 patient turns. Every patient is fictional.
 
@@ -80,16 +77,19 @@ In live video mode Tavus owns the conversation loop. The app subscribes to utter
 - **Motion**: `motion`
 - **Charts**: `recharts`
 - **AI**: `@google/generative-ai` (Gemini)
-- **Real-time video**: `@daily-co/daily-js` as the WebRTC transport for Tavus rooms
+- **Database**: SQLite through Node's built-in `node:sqlite`; no separate SQL installation for local use
+- **Authentication**: database sessions, hashed session tokens, and scrypt-hashed passwords
+- **Real-time video**: `@daily-co/daily-js` 0.91 as the WebRTC transport for Tavus rooms
+- **Reports**: server-generated learner/admin PDFs, organisation CSV, secure authenticated links and email drafts
 - **Fonts**: Outfit and JetBrains Mono via `next/font`
 
 ## Requirements
 
-- Node.js 20.9 or newer
+- Node.js 22.13 or newer with `node:sqlite` support (Node 24 recommended)
 - A Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
 - Chrome or Edge for browser speech recognition. Typed input works in any modern browser.
 
-A Gemini key is the only hard requirement. Voice, realistic avatars, and live video are all optional, and the app degrades cleanly when their keys are absent.
+A Gemini key is required for the app-managed simulated-person conversation loop. Feedback itself can fall back to observable rules. Voice, realistic avatars, and live video are optional, and the app degrades cleanly when their keys are absent.
 
 ## Quick start
 
@@ -104,7 +104,7 @@ Open `.env.local` and set `GEMINI_API_KEY`. Then:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). On first launch, `/login` links to `/setup`; create the organisation and first administrator, then create learner accounts from `/admin`.
 
 For a fast demo, pick **Angry family member**, accept the privacy notice, choose the stylised patient, and give at least two learner responses before ending the session. Feedback generation requires a minimum of two student turns.
 
@@ -124,6 +124,9 @@ Copy `.env.example` to `.env.local`. Never commit real keys, and never paste the
 | Variable | Purpose |
 | --- | --- |
 | `GEMINI_API_KEY` | Powers patient roleplay, emotion classification, and feedback generation |
+| `DATABASE_PATH` | Optional SQLite filename within `data/`, or an absolute path. Defaults to `data/clinical-mirror.db`; the database is ignored by Git. |
+| `AUTH_COOKIE_SECURE` | Keep unset for HTTPS production. Set `false` only when testing `next start` over plain localhost HTTP. |
+| `NEXT_PUBLIC_POST_SESSION_SURVEY_URL` | Optional Google Form or other survey URL shown after the learner review. Build-time value. |
 
 ### ElevenLabs voice (optional)
 
@@ -248,8 +251,13 @@ All routes are server side. API keys never reach the browser.
 | Route | Method | Description |
 | --- | --- | --- |
 | `/api/chat` | POST | Runs one patient turn through Gemini using the scenario's roleplay prompt. Returns `{ reply, emotion, intensity }`. Validates scenario availability and caps input length. |
+| `/api/auth/setup` | GET/POST | Reports first-run status and creates the initial organisation administrator. Disabled after the first account exists. |
+| `/api/auth/login` | POST | Verifies a scrypt-hashed password and creates a database-backed secure cookie session. |
+| `/api/auth/logout` | POST | Deletes the database session and expires the cookie. |
+| `/api/admin/users` | POST | Admin-only learner or administrator account creation. |
 | `/api/emotion` | POST | Classifies emotion and intensity from a patient utterance. Used in live video mode, where Tavus owns the reply. |
-| `/api/feedback` | POST | Scores the transcript against the rubric. Requires at least two student turns. Returns scores, summary, strengths, improvements, limitations, retry plan, confidence, and an educational disclaimer, all clamped and defaulted server side. |
+| `/api/coaching` | POST | Returns an optional score-free coaching checkpoint during practice. |
+| `/api/feedback` | POST | Generates a concise learner summary and a separate detailed admin report. Saves the session, transcript, and both outputs to SQLite; returns only the learner summary. |
 | `/api/tts` | POST | ElevenLabs proxy. Validates patient, emotion, and text length, then streams `audio/mpeg` with `no-store`. |
 | `/api/patient-reply-video` | POST | Generates ElevenLabs audio, sends it to the Wav2Lip service, and returns `{ videoUrl }` or `{ fallback: true, reason }`. |
 | `/api/tavus/status` | GET | Returns `{ available: boolean }` so the client can show or disable the live video option. |
@@ -285,7 +293,7 @@ interface Turn {
 
 `Scenario` carries display metadata (title, description, difficulty, patient name and age, icon, opening line, avatar variant, availability), briefing content (patient background, clinical context, session goal, objectives, do list, avoid list), and session configuration (initial intensity, max turns). `ServerScenario` extends it with the roleplay `systemPrompt`.
 
-`FeedbackResult` holds `scores` (empathy, clarity, de-escalation), a summary, `strengths` and `improvements` that each reference a turn number, `limitations`, a `retryPlan`, an `overallConfidence` rating, and an `educationalDisclaimer`. `SessionData` bundles the scenario, turns, and feedback, and is what gets written to `sessionStorage`.
+`LearnerFeedback` holds the concise headline, observed behaviour, learning focus, next action, and disclaimer shown to the learner. `AdminEvaluation` extends the evidence-linked evaluation with a factual summary and behavioural indicators. SQLite tables store organisations, users, auth sessions, practice sessions, conversation turns, and evaluations.
 
 ## Scripts
 
@@ -324,6 +332,7 @@ Every optional capability has a defined failure path, so a missing key or an off
 - Educational and formative only. It does not establish clinical competence and does not provide clinical advice.
 - Patient emotion and intensity values are generated by the same model that produces the reply, so treat them as interface signals rather than independent evidence.
 - Conversation text is sent to third-party APIs. Use fictional data only, never real patient information.
-- There are no accounts, no persistent storage, no institutional consent flow, no audit logs, and no production monitoring. Session data lives in `sessionStorage` and disappears when the tab closes.
+- SQLite and custom password login are suitable for local piloting, not internet-facing production. A hosted deployment should move to managed PostgreSQL and a maintained authentication provider with password reset and MFA.
+- The prototype has no institutional consent workflow, configurable retention/deletion policy, audit-event table, or production monitoring yet.
 - There is no test suite or CI configuration in the repository.
 - Before any real learner study, obtain faculty, privacy, and ethics approval, and define data retention and incident-response procedures.

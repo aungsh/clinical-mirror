@@ -11,6 +11,9 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
+  --font-sans: "Segoe UI", Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
   /* Backgrounds */
   --bg:          #fdfbf7;
   --surface:     #ffffff;
